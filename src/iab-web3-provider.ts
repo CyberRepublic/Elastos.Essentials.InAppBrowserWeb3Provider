@@ -5,30 +5,50 @@ import { IdMapping } from "./ids";
 import { ProviderRpcError } from "./providerrpcerror";
 import { Utils } from "./utils";
 
+// TODO: MAKE THIS DYNAMIC, REGISTERED BY ESSENTIALS CHAINID+URL
+const rpcUrls = {
+  // TODO: add others
+  20: "https://api.trinity-tech.cn/eth",           // Elastos mainnet
+  21: "https://api-testnet.trinity-tech.cn/eth",   // Elastos testnet
+  128: "https://http-mainnet.hecochain.com"              // HECO mainnet
+}
+
 /**
  * Internal web3 provider injected into Elastos Essentials' in app browser dApps and bridging
  * requests from dApps to Essentials (send transaction, etc).
  */
 class InAppBrowserWeb3Provider extends EventEmitter implements AbstractProvider {
-  private address: string = "0xeC22e7B0A63a24a2D689B2FFEF5640D141c80F21"; // TODO TMP
+  private address: string = "";
   private ready: boolean = false;
   private idMapping = new IdMapping();
   private callbacks = new Map(); // TODO: clear type
   private wrapResults = new Map(); // TODO: clear type
-  private rpcApiEndpoint: string = "https://api.trinity-tech.cn/eth"; // RPC API server url.
-  private chainId: number = 20; // TODO: config.chainId - hardcoding elastos mainnet for now
+  private chainId: number = null;
 
   constructor() {
     super();
-    console.log("Creating an InAppBrowserWeb3Provider");
+    console.log("Creating an Essentials InAppBrowserWeb3Provider");
     this.emitConnect(this.chainId);
+  }
+
+  public setChainId(chainId: number) {
+    this.chainId = chainId;
+    this.ready = !!(this.chainId && this.address);
+
+    console.log("Setting chain ID to:", this.chainId);
+    this.emit("chainChanged", this.chainId);
   }
 
   public setAddress(address: string) {
     const lowerAddress = (address || "").toLowerCase();
     this.address = lowerAddress;
-    this.ready = !!address;
-    /* for (var i = 0; i < window.frames.length; i++) {
+    this.ready = !!(this.chainId && this.address);
+
+    console.log("Setting address to:", address);
+    this.emit("accountsChanged", [address]); // BPI TEST
+
+    /* TODO
+    for (var i = 0; i < window.frames.length; i++) {
       const frame = window.frames[i];
       if (frame.ethereum && frame.ethereum.isTrust) {
         frame.ethereum.address = lowerAddress;
@@ -37,29 +57,43 @@ class InAppBrowserWeb3Provider extends EventEmitter implements AbstractProvider 
     } */
   }
 
-  public setRPCApiEndpoint(endpoint: string) {
-    this.rpcApiEndpoint = endpoint;
-  }
-
   public getRPCApiEndpoint(): string {
-    return this.rpcApiEndpoint;
+    return rpcUrls[this.chainId];
   }
 
-  public request(payload: JsonRpcPayload) {
-    return this._request(payload, false);
+  public isConnected(): boolean {
+    return true;
+  }
+
+  public request(payload: JsonRpcPayload): Promise<any> {
+    // 'this' points to window in methods like web3.eth.getAccounts()
+    var that = this;
+    if (!(this instanceof InAppBrowserWeb3Provider)) {
+      that = (window as any).ethereum;
+    }
+    console.log("THISTHAT1", this, that);
+
+    return that._request(payload, false);
   }
 
   /**
    * @deprecated Use request() method instead.
    */
   public sendAsync(payload: JsonRpcPayload, callback: (error: Error, result?: JsonRpcResponse) => void) {
-    this._request(payload)
+    // 'this' points to window in methods like web3.eth.getAccounts()
+    var that = this;
+    if (!(this instanceof InAppBrowserWeb3Provider)) {
+      that = (window as any).ethereum;
+    }
+    console.log("THISTHAT2", this, that);
+
+    that._request(payload)
       .then((data) => callback(null, data))
       .catch((error) => callback(error, null));
   }
 
   /**
-   * @private Internal rpc handler
+   * Internal request handler
    */
    private _request(payload: JsonRpcPayload, wrapResult = true): Promise<JsonRpcResponse> {
     console.log("InAppBrowserWeb3Provider: _request", payload);
@@ -70,6 +104,7 @@ class InAppBrowserWeb3Provider extends EventEmitter implements AbstractProvider 
         payload.id = Utils.genId();
       }
       this.callbacks.set(payload.id, (error, data) => {
+        console.log("Callback called", error, data);
         if (error) {
           reject(error);
         } else {
@@ -129,22 +164,22 @@ class InAppBrowserWeb3Provider extends EventEmitter implements AbstractProvider 
 
   private emitConnect(chainId: number) {
     console.log("InAppBrowserWeb3Provider: emitting connect", chainId);
-    this.emit("connect", { chainId: chainId });
+    this.emit("connect", { /* chainId: chainId */ });
   }
 
   private eth_accounts(): string[] {
     return this.address ? [this.address] : [];
   }
 
-  private eth_coinbase() {
+  private eth_coinbase(): string {
     return this.address;
   }
 
-  private net_version() {
+  private net_version(): string {
     return this.chainId.toString(10) || null;
   }
 
-  private eth_chainId() {
+  private eth_chainId(): string {
     return "0x" + this.chainId.toString(16);
   }
 
@@ -214,21 +249,14 @@ class InAppBrowserWeb3Provider extends EventEmitter implements AbstractProvider 
    * Internal js -> native message handler
    */
   private postMessage(handler: string, id: string | number, data: unknown) {
-    console.log("InAppBrowserWeb3Provider: postMessage", handler, data);
+    console.log("InAppBrowserWeb3Provider: postMessage", handler, id, data);
     if (this.ready || handler === "requestAccounts") {
       let object = {
         id: id,
         name: handler,
         object: data,
       };
-      // TODO: Need to understand where "window.trustwallet" is injected (probably by the essentials code)
-      // and if we need to support the "old client" flow or not.
-      /* if (window.trustwallet.postMessage) {
-        window.trustwallet.postMessage(object);
-      } else {
-        // old clients
-        window.webkit.messageHandlers[handler].postMessage(object);
-      } */
+      (window as any).webkit.messageHandlers.cordova_iab.postMessage(JSON.stringify(object));
     } else {
       this.sendError(id, new ProviderRpcError(4100, "Provider is not ready"));
     }
@@ -237,7 +265,7 @@ class InAppBrowserWeb3Provider extends EventEmitter implements AbstractProvider 
   /**
    * Internal native result -> js
    */
-  private sendResponse(id: string | number, result: JsonRpcResponse | unknown): void {
+  private sendResponse(id: string | number, result: unknown): void {
     console.log("InAppBrowserWeb3Provider: sendResponse", result);
 
     let originId = this.idMapping.tryPopId(id) || id;
@@ -248,13 +276,18 @@ class InAppBrowserWeb3Provider extends EventEmitter implements AbstractProvider 
       id: originId
     };
 
-    if (typeof result === "object" && "jsonrpc" in result && "result" in result) {
+    console.log("typeof result", typeof result);
+    /* if (typeof result === "object" && "jsonrpc" in result && "result" in result) {
       // result is a JsonRpcResponse
       data.result = (result as JsonRpcResponse).result;
     } else {
       // result is the JsonRpcResponse result
       data.result = result;
-    }
+    } */
+    data.result = result;
+
+    console.log("data result", data.result);
+    console.log("wrapResult", wrapResult);
 
     if (callback) {
       wrapResult ? callback(null, data) : callback(null, result);
