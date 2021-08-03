@@ -1,0 +1,22 @@
+<html>
+  <head>
+    <script src="../dist/essentialsiabprovider.js"></script>
+    <script>
+      let provider = new InAppBrowserWeb3Provider();
+      console.log("Provider:", provider);
+
+      provider.sendAsync({
+        jsonrpc: "eth_sendTransaction",
+        method: "method",
+        params: [
+          "param1"
+        ]
+      }, () => {
+        console.log("CALLBACK");
+      })
+    </script>
+  </head>
+  <body>
+    Please open the debug console.
+  </body>
+</html>
