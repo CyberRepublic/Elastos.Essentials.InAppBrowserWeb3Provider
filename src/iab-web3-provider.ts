@@ -13,6 +13,8 @@ const rpcUrls = {
   128: "https://http-mainnet.hecochain.com"              // HECO mainnet
 }
 
+type JsonRpcCallback = (error: Error | null, result?: JsonRpcResponse) => void;
+
 /**
  * Internal web3 provider injected into Elastos Essentials' in app browser dApps and bridging
  * requests from dApps to Essentials (send transaction, etc).
@@ -21,9 +23,9 @@ class InAppBrowserWeb3Provider extends EventEmitter implements AbstractProvider 
   private address: string = "";
   private ready: boolean = false;
   private idMapping = new IdMapping();
-  private callbacks = new Map(); // TODO: clear type
+  private callbacks = new Map<string | number, JsonRpcCallback>(); // TODO: clear type
   private wrapResults = new Map(); // TODO: clear type
-  private chainId: number = null;
+  private chainId: number = 20;
 
   constructor() {
     super();
@@ -37,6 +39,7 @@ class InAppBrowserWeb3Provider extends EventEmitter implements AbstractProvider 
 
     console.log("Setting chain ID to:", this.chainId);
     this.emit("chainChanged", this.chainId);
+    this.emit("networkChanged", this.chainId);
   }
 
   public setAddress(address: string) {
@@ -78,6 +81,123 @@ class InAppBrowserWeb3Provider extends EventEmitter implements AbstractProvider 
 
   /**
    * @deprecated Use request() method instead.
+   * https://docs.metamask.io/guide/ethereum-provider.html#legacy-methods
+   */
+  /* public async send(payload: JsonRpcPayload | string): Promise<JsonRpcResponse | any> {
+    // 'this' points to window in methods like web3.eth.getAccounts()
+    var that = this;
+    if (!(this instanceof InAppBrowserWeb3Provider)) {
+      that = (window as any).ethereum;
+    }
+
+    let rpcPayload: JsonRpcPayload = null;
+    let isRpcPayload: boolean; // Whether the received payload is a JsonRpcPayload or not
+    if (typeof payload === "string") {
+      isRpcPayload = false;
+      rpcPayload = {
+        jsonrpc: "",
+        method: payload,
+        params: []
+      };
+    }
+    else {
+      isRpcPayload = true;
+      rpcPayload = payload;
+    }
+
+    let result: any = null;
+    switch (rpcPayload.method) {
+      case "eth_accounts":
+        result = this.eth_accounts();
+        break;
+      case "eth_coinbase":
+        result = this.eth_coinbase();
+        break;
+      case "net_version":
+        result = this.net_version();
+        break;
+      case "eth_chainId":
+        result = this.eth_chainId();
+        break;
+      default:
+        throw new ProviderRpcError(
+          4200,
+          `send() cannot call method ${rpcPayload.method} synchronously without a callback. Please provide a callback parameter to call ${rpcPayload.method} asynchronously.`
+        );
+    }
+
+    if (isRpcPayload) {
+      // RPC payload? return a RPC response
+      let response: JsonRpcResponse = {
+        jsonrpc: "2.0",
+        id: rpcPayload.id as any,
+        result: result
+      };
+      return response;
+    }
+    else {
+      return result;
+    }
+  } */
+
+  /**
+   * @deprecated Use request() method instead.
+   * https://docs.metamask.io/guide/ethereum-provider.html#legacy-methods
+   */
+  public send(requestOrMethod: JsonRpcPayload | string, callbackOrParams: JsonRpcCallback | Array<any>) {
+    if (typeof requestOrMethod === "string") {
+        const method = requestOrMethod;
+        const params = Array.isArray(callbackOrParams)
+            ? callbackOrParams
+            : callbackOrParams !== undefined
+                ? [callbackOrParams]
+                : [];
+        const request: JsonRpcPayload = {
+            jsonrpc: "2.0",
+            id: 0,
+            method,
+            params
+        };
+        // Call _request() to wrap result into a JsonRpcResponse
+        return this._request(request).then(res => res.result);
+    }
+    // send(JSONRPCRequest | JSONRPCRequest[], callback): void
+    if (typeof callbackOrParams === "function") {
+        const request = requestOrMethod;
+        const callback = callbackOrParams;
+        return this.sendAsync(request, callback);
+    }
+    // send(JSONRPCRequest[]): JSONRPCResponse[]
+    if (Array.isArray(requestOrMethod)) {
+        const requests = requestOrMethod;
+        return requests.map(r => this.request(r));
+    }
+    // send(JSONRPCRequest): JSONRPCResponse
+    const req = requestOrMethod;
+    return this.request(req);
+  }
+/* sendAsync(request, callback) {
+    if (typeof callback !== "function") {
+        throw new Error("callback is required");
+    }
+    // send(JSONRPCRequest[], callback): void
+    if (Array.isArray(request)) {
+        const arrayCb = callback;
+        this._sendMultipleRequestsAsync(request)
+            .then(responses => arrayCb(null, responses))
+            .catch(err => arrayCb(err, null));
+        return;
+    }
+    // send(JSONRPCRequest, callback): void
+    const cb = callback;
+    this._sendRequestAsync(request)
+        .then(response => cb(null, response))
+        .catch(err => cb(err, null));
+} */
+
+  /**
+   * @deprecated Use request() method instead.
+   * https://docs.metamask.io/guide/ethereum-provider.html#legacy-methods
    */
   public sendAsync(payload: JsonRpcPayload, callback: (error: Error, result?: JsonRpcResponse) => void) {
     // 'this' points to window in methods like web3.eth.getAccounts()
@@ -85,7 +205,6 @@ class InAppBrowserWeb3Provider extends EventEmitter implements AbstractProvider 
     if (!(this instanceof InAppBrowserWeb3Provider)) {
       that = (window as any).ethereum;
     }
-    console.log("THISTHAT2", this, that);
 
     that._request(payload)
       .then((data) => callback(null, data))
@@ -103,7 +222,7 @@ class InAppBrowserWeb3Provider extends EventEmitter implements AbstractProvider 
       if (!payload.id) {
         payload.id = Utils.genId();
       }
-      this.callbacks.set(payload.id, (error, data) => {
+      this.callbacks.set(payload.id as any, (error, data) => {
         console.log("Callback called", error, data);
         if (error) {
           reject(error);
@@ -149,7 +268,7 @@ class InAppBrowserWeb3Provider extends EventEmitter implements AbstractProvider 
           throw new ProviderRpcError(4200, `Elastos Essentials does not support the ${payload.method} method.`);
         default:
           // call upstream rpc
-          this.callbacks.delete(payload.id);
+          this.callbacks.delete(payload.id as any);
           this.wrapResults.delete(payload.id);
 
           this.callJsonRPC(payload).then(response => {
@@ -164,7 +283,7 @@ class InAppBrowserWeb3Provider extends EventEmitter implements AbstractProvider 
 
   private emitConnect(chainId: number) {
     console.log("InAppBrowserWeb3Provider: emitting connect", chainId);
-    this.emit("connect", { /* chainId: chainId */ });
+    this.emit("connect", { chainId: chainId });
   }
 
   private eth_accounts(): string[] {
@@ -183,7 +302,7 @@ class InAppBrowserWeb3Provider extends EventEmitter implements AbstractProvider 
     return "0x" + this.chainId.toString(16);
   }
 
-  private eth_sign(payload) {
+  private eth_sign(payload: JsonRpcPayload) {
     const buffer = Utils.messageToBuffer(payload.params[1]);
     const hex = Utils.bufferToHex(buffer);
     // TODO: unclear why this is a "personal message" if the buffer is utf8...
@@ -194,7 +313,7 @@ class InAppBrowserWeb3Provider extends EventEmitter implements AbstractProvider 
     } */
   }
 
-  private personal_sign(payload) {
+  private personal_sign(payload: JsonRpcPayload) {
     const message = payload.params[0];
     const buffer = Utils.messageToBuffer(message);
     if (buffer.length === 0) {
@@ -206,7 +325,7 @@ class InAppBrowserWeb3Provider extends EventEmitter implements AbstractProvider 
     }
   }
 
-  private personal_ecRecover(payload) {
+  private personal_ecRecover(payload: JsonRpcPayload) {
     this.postMessage("ecRecover", payload.id, {
       signature: payload.params[1],
       message: payload.params[0],
@@ -223,15 +342,15 @@ class InAppBrowserWeb3Provider extends EventEmitter implements AbstractProvider 
     }); */
   }
 
-  private eth_sendTransaction(payload) {
+  private eth_sendTransaction(payload: JsonRpcPayload) {
     this.postMessage("signTransaction", payload.id, payload.params[0]);
   }
 
-  private eth_requestAccounts(payload) {
+  private eth_requestAccounts(payload: JsonRpcPayload) {
     this.postMessage("requestAccounts", payload.id, {});
   }
 
-  private wallet_watchAsset(payload) {
+  private wallet_watchAsset(payload: /* JsonRpcPayload */ any) {
     let options = payload.params.options;
     this.postMessage("watchAsset", payload.id, {
       type: payload.type,
@@ -290,7 +409,7 @@ class InAppBrowserWeb3Provider extends EventEmitter implements AbstractProvider 
     console.log("wrapResult", wrapResult);
 
     if (callback) {
-      wrapResult ? callback(null, data) : callback(null, result);
+      wrapResult ? callback(null, data) : callback(null, result as any);
       this.callbacks.delete(id);
     } else {
       console.log(`callback id: ${id} not found`);
