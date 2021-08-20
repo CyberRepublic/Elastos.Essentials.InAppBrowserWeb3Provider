@@ -12,7 +12,7 @@ export default {
 		{
 			sourcemap: true,
 			format: 'umd',
-			file: 'dist/essentialsiabprovider.js'
+			file: 'dist/essentialsiabweb3provider.js'
 		},
 	],
 	external: [
@@ -42,7 +42,7 @@ export default {
 		copy({
 			targets: [
 				{
-					src: 'dist/essentialsiabprovider.js',
+					src: 'dist/essentialsiabweb3provider.js',
 					dest: '../../App/src/assets/'
 				}
 			]
