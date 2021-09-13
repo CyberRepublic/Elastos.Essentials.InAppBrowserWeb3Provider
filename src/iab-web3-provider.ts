@@ -1,17 +1,9 @@
 import EventEmitter from "events";
-import { AbstractProvider, RequestArguments } from "web3-core";
-import { JsonRpcResponse, JsonRpcPayload } from "web3-core-helpers";
+import { AbstractProvider } from "web3-core";
+import { JsonRpcPayload, JsonRpcResponse } from "web3-core-helpers";
 import { IdMapping } from "./ids";
 import { ProviderRpcError } from "./providerrpcerror";
 import { Utils } from "./utils";
-
-// TODO: MAKE THIS DYNAMIC, REGISTERED BY ESSENTIALS CHAINID+URL
-const rpcUrls = {
-  // TODO: add others
-  20: "https://api.trinity-tech.cn/eth",           // Elastos mainnet
-  21: "https://api-testnet.trinity-tech.cn/eth",   // Elastos testnet
-  128: "https://http-mainnet.hecochain.com"              // HECO mainnet
-}
 
 type JsonRpcCallback = (error: Error | null, result?: JsonRpcResponse) => void;
 
@@ -28,6 +20,10 @@ class InAppBrowserWeb3Provider extends EventEmitter implements AbstractProvider 
   private callbacks = new Map<string | number, JsonRpcCallback>();
   private wrapResults = new Map<string | number, boolean>();
   private chainId: number = 20;
+
+  private rpcUrls: { [chainID: number]: string } = {
+    // List of chainId -> rpcUrl set by Essentials.
+  }
 
   constructor() {
     super();
@@ -70,8 +66,29 @@ class InAppBrowserWeb3Provider extends EventEmitter implements AbstractProvider 
     } */
   }
 
+  // Backward compatibility with some dapps.
+  public get selectedAddress(): string {
+    return this.address;
+  }
+
+  public setRPCApiEndpoint(chainId: number, rpcUrl: string) {
+    this.rpcUrls[chainId] = rpcUrl;
+  }
+
+  private getRPCApiEndpoint(): string {
+    if (!(this.chainId in this.rpcUrls))
+      throw new Error("RPC URL not set for chain ID" + this.chainId);
+
+    return this.rpcUrls[this.chainId];
+  }
+
   public isConnected(): boolean {
     return true;
+  }
+
+  public enable(): Promise<void> {
+    // Nothing to do - already active
+    return Promise.resolve();
   }
 
   public request(payload: JsonRpcPayload): Promise<any> {
@@ -365,10 +382,6 @@ class InAppBrowserWeb3Provider extends EventEmitter implements AbstractProvider 
       callback(error instanceof Error ? error : new Error(error), null);
       this.callbacks.delete(id);
     }
-  }
-
-  private getRPCApiEndpoint(): string {
-    return rpcUrls[this.chainId];
   }
 
   private async callJsonRPC(payload: JsonRpcPayload): Promise<JsonRpcResponse> {
