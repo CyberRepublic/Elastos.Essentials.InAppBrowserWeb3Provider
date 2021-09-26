@@ -200,6 +200,8 @@ class InAppBrowserWeb3Provider extends EventEmitter implements AbstractProvider 
           return this.eth_requestAccounts(payload);
         case "wallet_watchAsset":
           return this.wallet_watchAsset(payload);
+        case "wallet_switchEthereumChain":
+          return this.wallet_switchEthereumChain(payload);
         case "wallet_addEthereumChain":
           return this.wallet_addEthereumChain(payload);
         case "eth_newFilter":
@@ -286,16 +288,16 @@ class InAppBrowserWeb3Provider extends EventEmitter implements AbstractProvider 
   }
 
   private eth_sendTransaction(payload: JsonRpcPayload) {
-    this.postMessage("signTransaction", payload.id, payload.params[0]);
+    this.postMessage("eth_sendTransaction", payload.id, payload.params[0]);
   }
 
   private eth_requestAccounts(payload: JsonRpcPayload) {
-    this.postMessage("requestAccounts", payload.id, {});
+    this.postMessage("eth_requestAccounts", payload.id, {});
   }
 
   private wallet_watchAsset(payload: /* JsonRpcPayload */ any) {
     let options = payload.params.options;
-    this.postMessage("watchAsset", payload.id, {
+    this.postMessage("wallet_watchAsset", payload.id, {
       type: payload.type,
       contract: options.address,
       symbol: options.symbol,
@@ -303,8 +305,12 @@ class InAppBrowserWeb3Provider extends EventEmitter implements AbstractProvider 
     });
   }
 
+  private wallet_switchEthereumChain(payload: JsonRpcPayload) {
+    this.postMessage("wallet_switchEthereumChain", payload.id, payload.params[0]);
+  }
+
   private wallet_addEthereumChain(payload: JsonRpcPayload) {
-    this.postMessage("addEthereumChain", payload.id, payload.params[0]);
+    this.postMessage("wallet_addEthereumChain", payload.id, payload.params[0]);
   }
 
   /**
@@ -313,7 +319,7 @@ class InAppBrowserWeb3Provider extends EventEmitter implements AbstractProvider 
   private postMessage(handler: string, id: string | number, data: unknown) {
     //console.log("InAppBrowserWeb3Provider: postMessage", handler, id, data);
 
-    if (this.ready || handler === "requestAccounts") {
+    if (this.ready || handler === "eth_requestAccounts") {
       let object = {
         id: id,
         name: handler,
