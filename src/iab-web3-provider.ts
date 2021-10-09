@@ -13,7 +13,7 @@ type JsonRpcCallback = (error: Error | null, result?: JsonRpcResponse) => void;
  *
  * Source code inspired by the Trust Wallet provider (https://github.com/trustwallet/trust-web3-provider/blob/master/src/index.js).
  */
-class InAppBrowserWeb3Provider extends EventEmitter implements AbstractProvider {
+class DappBrowserWeb3Provider extends EventEmitter implements AbstractProvider {
   private address: string = "";
   private ready: boolean = false;
   private idMapping = new IdMapping(); // Helper class to create and retrieve payload IDs for requests and responses.
@@ -27,7 +27,7 @@ class InAppBrowserWeb3Provider extends EventEmitter implements AbstractProvider 
 
   constructor() {
     super();
-    console.log("Creating an Essentials InAppBrowserWeb3Provider");
+    console.log("Creating an Essentials DappBrowserWeb3Provider");
     this.emitConnect(this.chainId);
   }
 
@@ -94,7 +94,7 @@ class InAppBrowserWeb3Provider extends EventEmitter implements AbstractProvider 
   public request(payload: JsonRpcPayload): Promise<any> {
     // 'this' points to window in methods like web3.eth.getAccounts()
     var that = this;
-    if (!(this instanceof InAppBrowserWeb3Provider)) {
+    if (!(this instanceof DappBrowserWeb3Provider)) {
       that = (window as any).ethereum;
     }
 
@@ -145,7 +145,7 @@ class InAppBrowserWeb3Provider extends EventEmitter implements AbstractProvider 
   public sendAsync(payload: JsonRpcPayload, callback: (error: Error, result?: JsonRpcResponse) => void) {
     // 'this' points to window in methods like web3.eth.getAccounts()
     var that = this;
-    if (!(this instanceof InAppBrowserWeb3Provider)) {
+    if (!(this instanceof DappBrowserWeb3Provider)) {
       that = (window as any).ethereum;
     }
 
@@ -325,7 +325,7 @@ class InAppBrowserWeb3Provider extends EventEmitter implements AbstractProvider 
         name: handler,
         object: data,
       };
-      (window as any).webkit.messageHandlers.cordova_iab.postMessage(JSON.stringify(object));
+      (window as any).webkit.messageHandlers.essentialsExtractor.postMessage(JSON.stringify(object));
     } else {
       this.sendError(id, new ProviderRpcError(4100, "Provider is not ready"));
     }
@@ -433,4 +433,4 @@ class InAppBrowserWeb3Provider extends EventEmitter implements AbstractProvider 
 }
 
 // Expose this class globally to be able to create instances from the browser dApp.
-window["InAppBrowserWeb3Provider"] = InAppBrowserWeb3Provider;
+window["DappBrowserWeb3Provider"] = DappBrowserWeb3Provider;
