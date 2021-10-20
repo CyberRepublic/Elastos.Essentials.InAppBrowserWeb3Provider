@@ -278,13 +278,10 @@ class DappBrowserWeb3Provider extends EventEmitter implements AbstractProvider {
   }
 
   private eth_signTypedData(payload, useV4) {
-    // TODO
-    /* const message = JSON.parse(payload.params[1]);
-    const hash = TypedDataUtils.sign(message, useV4);
-    this.postMessage("signTypedMessage", payload.id, {
-      data: "0x" + hash.toString("hex"),
-      raw: payload.params[1],
-    }); */
+    this.postMessage("eth_signTypedData", payload.id, {
+      payload: payload.params[1],
+      useV4
+    });
   }
 
   private eth_sendTransaction(payload: JsonRpcPayload) {
