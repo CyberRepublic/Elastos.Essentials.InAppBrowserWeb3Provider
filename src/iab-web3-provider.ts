@@ -14,31 +14,37 @@ type JsonRpcCallback = (error: Error | null, result?: JsonRpcResponse) => void;
  * Source code inspired by the Trust Wallet provider (https://github.com/trustwallet/trust-web3-provider/blob/master/src/index.js).
  */
 class DappBrowserWeb3Provider extends EventEmitter implements AbstractProvider {
-  private address: string = "";
+  private address: string = null;
   private ready: boolean = false;
   private idMapping = new IdMapping(); // Helper class to create and retrieve payload IDs for requests and responses.
   private callbacks = new Map<string | number, JsonRpcCallback>();
   private wrapResults = new Map<string | number, boolean>();
-  private chainId: number = 20;
+  private chainId: number = null;
 
   private rpcUrls: { [chainID: number]: string } = {
     // List of chainId -> rpcUrl set by Essentials.
   }
 
-  constructor() {
+  constructor(chainId: number, rpcUrl: string, address: string) {
     super();
     console.log("Creating an Essentials DappBrowserWeb3Provider");
-    this.emitConnect(this.chainId);
+
+    this.chainId = chainId;
+    this.setRPCApiEndpoint(chainId, rpcUrl);
+    this.address = address;
+    this.ready = !!(this.chainId && this.address);
+
+    this.emitConnect(chainId);
   }
 
   /**
    * Sets the active wallet chain ID and informs listeners about the change.
    */
   public setChainId(chainId: number) {
-    console.log("Setting chain ID to:", this.chainId);
-
     this.chainId = chainId;
     this.ready = !!(this.chainId && this.address);
+
+    console.log("Setting chain ID to:", this.chainId);
 
     this.emit("chainChanged", this.chainId);
     this.emit("networkChanged", this.chainId);
@@ -48,11 +54,11 @@ class DappBrowserWeb3Provider extends EventEmitter implements AbstractProvider {
    * Sets the active wallet address and informs listeners about the change.
    */
   public setAddress(address: string) {
-    console.log("Setting address to:", address);
-
     const lowerAddress = (address || "").toLowerCase();
     this.address = lowerAddress;
     this.ready = !!(this.chainId && this.address);
+
+    console.log("Setting address to:", address);
 
     this.emit("accountsChanged", [address]);
 
