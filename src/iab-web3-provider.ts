@@ -258,7 +258,7 @@ class DappBrowserWeb3Provider extends EventEmitter implements AbstractProvider {
     throw new Error("eth_sign NOT IMPLEMENTED");
     // TODO: unclear why this is a "personal message" if the buffer is utf8...
     /* if (isUtf8(buffer)) {
-      this.postMessage("signPersonalMessage", payload.id, { data: hex });
+      this.postMessage("personal_sign", payload.id, { data: hex });
     } else {
       this.postMessage("signMessage", payload.id, { data: hex });
     } */
@@ -270,9 +270,9 @@ class DappBrowserWeb3Provider extends EventEmitter implements AbstractProvider {
     if (buffer.length === 0) {
       // hex it
       const hex = Utils.bufferToHex(message);
-      this.postMessage("signPersonalMessage", payload.id, { data: hex });
+      this.postMessage("personal_sign", payload.id, { data: hex });
     } else {
-      this.postMessage("signPersonalMessage", payload.id, { data: message });
+      this.postMessage("personal_sign", payload.id, { data: message });
     }
   }
 
