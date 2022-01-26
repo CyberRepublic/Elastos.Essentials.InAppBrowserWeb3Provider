@@ -1,4 +1,5 @@
 import EventEmitter from "events";
+import isUtf8 from 'isutf8';
 import { AbstractProvider } from "web3-core";
 import { JsonRpcPayload, JsonRpcResponse } from "web3-core-helpers";
 import { IdMapping } from "./ids";
@@ -255,13 +256,21 @@ class DappBrowserWeb3Provider extends EventEmitter implements AbstractProvider {
   private eth_sign(payload: JsonRpcPayload) {
     const buffer = Utils.messageToBuffer(payload.params[1]);
     const hex = Utils.bufferToHex(buffer);
-    throw new Error("eth_sign NOT IMPLEMENTED");
-    // TODO: unclear why this is a "personal message" if the buffer is utf8...
-    /* if (isUtf8(buffer)) {
+
+    /**
+     * Historically eth_sign can either receive:
+     * - a very insecure raw message (hex) - supported by metamask
+     * - a prefixed message (utf8) - standardized implementation
+     *
+     * So we detect the format here:
+     * - if that's a utf8 prefixed string -> eth_sign = personal_sign
+     * - if that's a buffer (insecure hex that could sign any transaction) -> insecure eth_sign screen
+     */
+    if (isUtf8(buffer)) {
       this.postMessage("personal_sign", payload.id, { data: hex });
     } else {
-      this.postMessage("signMessage", payload.id, { data: hex });
-    } */
+      this.postMessage("signInsecureMessage", payload.id, { data: hex });
+    }
   }
 
   private personal_sign(payload: JsonRpcPayload) {
