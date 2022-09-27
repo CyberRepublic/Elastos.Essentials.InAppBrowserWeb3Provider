@@ -47,8 +47,11 @@ class DappBrowserWeb3Provider extends EventEmitter implements AbstractProvider {
 
     console.log("Setting chain ID to:", this.chainId);
 
-    this.emit("chainChanged", this.chainId);
-    this.emit("networkChanged", this.chainId);
+    // EIP1193 SPEC:
+    // - networkChanged will emit the network ID as a decimal string
+    // - chainChanged will emit the chain ID as a hexadecimal string
+    this.emit("chainChanged", '0x' + Number(this.chainId).toString(16));
+    this.emit("networkChanged", Number(this.chainId).toString(10));
   }
 
   /**
