@@ -28,7 +28,7 @@ class DappBrowserWeb3Provider extends EventEmitter implements AbstractProvider {
 
   constructor(chainId: number, rpcUrl: string, address: string) {
     super();
-    console.log("Creating an Essentials DappBrowserWeb3Provider");
+    console.log("Creating an Essentials DappBrowserWeb3Provider", chainId, rpcUrl, address);
 
     this.chainId = chainId;
     this.setRPCApiEndpoint(chainId, rpcUrl);
