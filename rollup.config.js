@@ -3,6 +3,7 @@ import resolve from '@rollup/plugin-node-resolve';
 import typescript from "@rollup/plugin-typescript";
 import copy from "rollup-plugin-copy";
 import alias from "@rollup/plugin-alias";
+import { terser } from 'rollup-plugin-terser';
 
 const production = !process.env.ROLLUP_WATCH;
 
@@ -10,7 +11,7 @@ export default {
 	input: 'src/iab-web3-provider.ts',
 	output: [
 		{
-			sourcemap: true,
+			sourcemap: !production,
 			format: 'iife',
 			file: 'dist/essentialsiabweb3provider.js'
 		},
@@ -36,7 +37,7 @@ export default {
 		commonjs(),
 		typescript({
 			declaration: false,
-			sourceMap: true,
+			sourceMap: !production,
 			inlineSources: !production
 		}),
 		copy({
@@ -46,11 +47,11 @@ export default {
 					dest: '../../App/src/assets/'
 				}
 			]
-		})
+		}),
 
 		// If we're building for production (npm run build
 		// instead of npm run dev), minify
-		//production && terser(),
+		production && terser(),
 	],
 	watch: {
 		clearScreen: true

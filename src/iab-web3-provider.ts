@@ -177,6 +177,7 @@ class DappBrowserWeb3Provider extends EventEmitter implements AbstractProvider {
       }
       this.callbacks.set(payload.id as any, (error, data) => {
         if (error) {
+          console.log("InAppBrowserWeb3Provider: _request error", error);
           reject(error);
         } else {
           resolve(data);
@@ -396,11 +397,17 @@ class DappBrowserWeb3Provider extends EventEmitter implements AbstractProvider {
   /**
    * Internal native error -> js
    */
-  private sendError(id: string | number, error: Error | string) {
-    //console.log(`<== ${id} sendError ${error}`);
+  private sendError(id: string | number, error: Error | string | object) {
+    //console.log(`<== ${id} sendError ${error}`, error);
+    //console.log("Instanceof ProviderRpcError?", error instanceof ProviderRpcError)
     let callback = this.callbacks.get(id);
     if (callback) {
-      callback(error instanceof Error ? error : new Error(error), null);
+      if (error instanceof Error)
+        callback(error);
+      else if (typeof error === "object" && "code" in error)
+        callback(new ProviderRpcError(error["code"], error["message"]));
+      else
+        callback(new Error(`${error}`));
       this.callbacks.delete(id);
     }
   }
