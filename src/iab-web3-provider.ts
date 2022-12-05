@@ -20,7 +20,15 @@ class DappBrowserWeb3Provider extends EventEmitter implements AbstractProvider {
   private idMapping = new IdMapping(); // Helper class to create and retrieve payload IDs for requests and responses.
   private callbacks = new Map<string | number, JsonRpcCallback>();
   private wrapResults = new Map<string | number, boolean>();
-  private chainId: number = null;
+
+  private _chainId: number; // decimal version of the chain ID
+  public get chainId(): string {
+    return '0x' + this._chainId.toString(16);
+  }
+
+  public set chainId(_chainId: string) {
+    throw new Error("Property chainId cannot be set");
+  }
 
   private rpcUrls: { [chainID: number]: string } = {
     // List of chainId -> rpcUrl set by Essentials.
@@ -30,10 +38,10 @@ class DappBrowserWeb3Provider extends EventEmitter implements AbstractProvider {
     super();
     console.log("Creating an Essentials DappBrowserWeb3Provider", chainId, rpcUrl, address);
 
-    this.chainId = chainId;
+    this._chainId = chainId;
     this.setRPCApiEndpoint(chainId, rpcUrl);
     this.address = address;
-    this.ready = !!(this.chainId && this.address);
+    this.ready = !!(this._chainId && this.address);
 
     this.emitConnect(chainId);
   }
@@ -42,16 +50,16 @@ class DappBrowserWeb3Provider extends EventEmitter implements AbstractProvider {
    * Sets the active wallet chain ID and informs listeners about the change.
    */
   public setChainId(chainId: number) {
-    this.chainId = chainId;
-    this.ready = !!(this.chainId && this.address);
+    this._chainId = chainId;
+    this.ready = !!(this._chainId && this.address);
 
-    console.log("Setting chain ID to:", this.chainId);
+    console.log("Setting chain ID to:", this._chainId);
 
     // EIP1193 SPEC:
     // - networkChanged will emit the network ID as a decimal string
     // - chainChanged will emit the chain ID as a hexadecimal string
-    this.emit("chainChanged", '0x' + Number(this.chainId).toString(16));
-    this.emit("networkChanged", Number(this.chainId).toString(10));
+    this.emit("chainChanged", '0x' + Number(this._chainId).toString(16));
+    this.emit("networkChanged", Number(this._chainId).toString(10));
   }
 
   /**
@@ -60,7 +68,7 @@ class DappBrowserWeb3Provider extends EventEmitter implements AbstractProvider {
   public setAddress(address: string) {
     const lowerAddress = (address || "").toLowerCase();
     this.address = lowerAddress;
-    this.ready = !!(this.chainId && this.address);
+    this.ready = !!(this._chainId && this.address);
 
     console.log("Setting address to:", address);
 
@@ -86,10 +94,10 @@ class DappBrowserWeb3Provider extends EventEmitter implements AbstractProvider {
   }
 
   private getRPCApiEndpoint(): string {
-    if (!(this.chainId in this.rpcUrls))
-      throw new Error("RPC URL not set for chain ID" + this.chainId);
+    if (!(this._chainId in this.rpcUrls))
+      throw new Error("RPC URL not set for chain ID" + this._chainId);
 
-    return this.rpcUrls[this.chainId];
+    return this.rpcUrls[this._chainId];
   }
 
   public isConnected(): boolean {
@@ -250,11 +258,11 @@ class DappBrowserWeb3Provider extends EventEmitter implements AbstractProvider {
   }
 
   private net_version(): string {
-    return this.chainId.toString(10) || null;
+    return this._chainId.toString(10) || null;
   }
 
   private eth_chainId(): string {
-    return "0x" + this.chainId.toString(16);
+    return "0x" + this._chainId.toString(16);
   }
 
   private eth_sign(payload: JsonRpcPayload) {
