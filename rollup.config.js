@@ -8,7 +8,7 @@ import { terser } from 'rollup-plugin-terser';
 const production = !process.env.ROLLUP_WATCH;
 
 export default {
-	input: 'src/iab-web3-provider.ts',
+	input: 'src/index.ts',
 	output: [
 		{
 			sourcemap: !production,

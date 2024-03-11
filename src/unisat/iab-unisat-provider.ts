@@ -1,71 +1,62 @@
 import EventEmitter from "events";
-import isUtf8 from 'isutf8';
-import { AbstractProvider } from "web3-core";
-import { JsonRpcPayload, JsonRpcResponse } from "web3-core-helpers";
-import { IdMapping } from "./ids";
-import { ProviderRpcError } from "./providerrpcerror";
-import { Utils } from "./utils";
+import { JsonRpcResponse } from "web3-core-helpers";
+import { IdMapping } from "../ids";
 
 type JsonRpcCallback = (error: Error | null, result?: JsonRpcResponse) => void;
+
+type SendBitcoinOptions = {
+  feeRate: number;
+}
 
 /**
  * Internal web3 provider injected into Elastos Essentials' in app browser dApps and bridging
  * requests from dApps to Essentials (send transaction, etc).
  *
- * Source code inspired by the Trust Wallet provider (https://github.com/trustwallet/trust-web3-provider/blob/master/src/index.js).
+ * This provider simulates support for window.unisat (Bitcoin wallet)
  */
-class DappBrowserWeb3Provider extends EventEmitter implements AbstractProvider {
-  private address: string = null;
+class DappBrowserUnisatProvider extends EventEmitter {
+  private address: string = null; // Bitcoin address
   private ready: boolean = false;
   private idMapping = new IdMapping(); // Helper class to create and retrieve payload IDs for requests and responses.
   private callbacks = new Map<string | number, JsonRpcCallback>();
   private wrapResults = new Map<string | number, boolean>();
 
-  private _chainId: number; // decimal version of the chain ID
-  public get chainId(): string {
-    return '0x' + this._chainId.toString(16);
-  }
-
-  public set chainId(_chainId: string) {
-    throw new Error("Property chainId cannot be set");
-  }
-
-  private rpcUrls: { [chainID: number]: string } = {
+  /*private rpcUrls: { [chainID: number]: string } = {
     // List of chainId -> rpcUrl set by Essentials.
-  }
+  } */
 
-  constructor(chainId: number, rpcUrl: string, address: string) {
+  constructor(rpcUrl: string, address: string) {
     super();
-    console.log("Creating an Essentials DappBrowserWeb3Provider", chainId, rpcUrl, address);
+    console.log("Creating an Essentials DappBrowserUnisatProvider", rpcUrl, address);
 
-    this._chainId = chainId;
+    /* this._chainId = chainId;
     this.setRPCApiEndpoint(chainId, rpcUrl);
-    this.address = address;
-    this.ready = !!(this._chainId && this.address);
+    this.ready = !!(this._chainId && this.address); */
 
-    this.emitConnect(chainId);
+    this.address = address;
+    this.ready = true;
+
+    //this.emitConnect(chainId);
   }
 
-  /**
-   * Sets the active wallet chain ID and informs listeners about the change.
-   */
-  public setChainId(chainId: number) {
-    this._chainId = chainId;
-    this.ready = !!(this._chainId && this.address);
+  public async requestAccounts(): Promise<string[]> {
+    return [this.address];
+  }
 
-    console.log("Setting chain ID to:", this._chainId);
+  public async getAccounts(): Promise<string[]> {
+    return [this.address];
+  }
 
-    // EIP1193 SPEC:
-    // - networkChanged will emit the network ID as a decimal string
-    // - chainChanged will emit the chain ID as a hexadecimal string
-    this.emit("chainChanged", '0x' + Number(this._chainId).toString(16));
-    this.emit("networkChanged", Number(this._chainId).toString(10));
+  public async sendBitcoin(payAddress: string, satsToPay: number, options: SendBitcoinOptions): Promise<string> {
+    console.log("sendBitcoin", payAddress, satsToPay, options);
+    this.postMessage("sendBitcoin", 12, { toto: "data yes" })
+    return "txid";
   }
 
   /**
    * Sets the active wallet address and informs listeners about the change.
    */
-  public setAddress(address: string) {
+  /* public setAddress(address: string) {
     const lowerAddress = (address || "").toLowerCase();
     this.address = lowerAddress;
     this.ready = !!(this._chainId && this.address);
@@ -73,23 +64,14 @@ class DappBrowserWeb3Provider extends EventEmitter implements AbstractProvider {
     console.log("Setting address to:", address);
 
     this.emit("accountsChanged", [address]);
-
-    /* TODO
-    for (var i = 0; i < window.frames.length; i++) {
-      const frame = window.frames[i];
-      if (frame.ethereum && frame.ethereum.isTrust) {
-        frame.ethereum.address = lowerAddress;
-        frame.ethereum.ready = !!address;
-      }
-    } */
-  }
+  } */
 
   // Backward compatibility with some dapps.
-  public get selectedAddress(): string {
+  /* public get selectedAddress(): string {
     return this.address;
-  }
+  } */
 
-  public setRPCApiEndpoint(chainId: number, rpcUrl: string) {
+  /* public setRPCApiEndpoint(chainId: number, rpcUrl: string) {
     this.rpcUrls[chainId] = rpcUrl;
   }
 
@@ -98,9 +80,9 @@ class DappBrowserWeb3Provider extends EventEmitter implements AbstractProvider {
       throw new Error("RPC URL not set for chain ID" + this._chainId);
 
     return this.rpcUrls[this._chainId];
-  }
+  } */
 
-  public isConnected(): boolean {
+  /* public isConnected(): boolean {
     return true;
   }
 
@@ -117,13 +99,13 @@ class DappBrowserWeb3Provider extends EventEmitter implements AbstractProvider {
     }
 
     return that._request(payload, false);
-  }
+  } */
 
   /**
    * @deprecated Use request() method instead.
    * https://docs.metamask.io/guide/ethereum-provider.html#legacy-methods
    */
-  public send(requestOrMethod: JsonRpcPayload | string, callbackOrParams: JsonRpcCallback | Array<any>) {
+  /* public send(requestOrMethod: JsonRpcPayload | string, callbackOrParams: JsonRpcCallback | Array<any>) {
     if (typeof requestOrMethod === "string") {
       const method = requestOrMethod;
       const params = Array.isArray(callbackOrParams)
@@ -154,13 +136,13 @@ class DappBrowserWeb3Provider extends EventEmitter implements AbstractProvider {
     // send(JSONRPCRequest): JSONRPCResponse
     const req = requestOrMethod;
     return this.request(req);
-  }
+  } */
 
   /**
    * @deprecated Use request() method instead.
    * https://docs.metamask.io/guide/ethereum-provider.html#legacy-methods
    */
-  public sendAsync(payload: JsonRpcPayload, callback: (error: Error, result?: JsonRpcResponse) => void) {
+  /* public sendAsync(payload: JsonRpcPayload, callback: (error: Error, result?: JsonRpcResponse) => void) {
     // 'this' points to window in methods like web3.eth.getAccounts()
     var that = this;
     if (!(this instanceof DappBrowserWeb3Provider)) {
@@ -170,13 +152,13 @@ class DappBrowserWeb3Provider extends EventEmitter implements AbstractProvider {
     that._request(payload)
       .then((data) => callback(null, data))
       .catch((error) => callback(error, null));
-  }
+  } */
 
   /**
    * Internal request handler that receives JsonRpcPayloads and returns JsonRpcResponses.
    */
-  private _request(payload: JsonRpcPayload, wrapResult = true): Promise<JsonRpcResponse> {
-    //console.log("InAppBrowserWeb3Provider: _request", payload);
+  /* private _request(payload: JsonRpcPayload, wrapResult = true): Promise<JsonRpcResponse> {
+    //console.log("InAppBrowserUnisatProvider: _request", payload);
 
     this.idMapping.tryIntifyId(payload);
     return new Promise<JsonRpcResponse>((resolve, reject) => {
@@ -185,7 +167,7 @@ class DappBrowserWeb3Provider extends EventEmitter implements AbstractProvider {
       }
       this.callbacks.set(payload.id as any, (error, data) => {
         if (error) {
-          console.log("InAppBrowserWeb3Provider: _request error", error);
+          console.log("InAppBrowserUnisatProvider: _request error", error);
           reject(error);
         } else {
           resolve(data);
@@ -245,7 +227,7 @@ class DappBrowserWeb3Provider extends EventEmitter implements AbstractProvider {
   }
 
   private emitConnect(chainId: number) {
-    console.log("InAppBrowserWeb3Provider: emitting connect", chainId);
+    console.log("InAppBrowserUnisatProvider: emitting connect", chainId);
     this.emit("connect", { chainId: chainId });
   }
 
@@ -263,13 +245,13 @@ class DappBrowserWeb3Provider extends EventEmitter implements AbstractProvider {
 
   private eth_chainId(): string {
     return "0x" + this._chainId.toString(16);
-  }
+  } */
 
-  private eth_sign(payload: JsonRpcPayload) {
+  /* private eth_sign(payload: JsonRpcPayload) {
     const buffer = Utils.messageToBuffer(payload.params[1]);
     const hex = Utils.bufferToHex(buffer);
 
-    /**
+    **
      * Historically eth_sign can either receive:
      * - a very insecure raw message (hex) - supported by metamask
      * - a prefixed message (utf8) - standardized implementation
@@ -277,89 +259,37 @@ class DappBrowserWeb3Provider extends EventEmitter implements AbstractProvider {
      * So we detect the format here:
      * - if that's a utf8 prefixed string -> eth_sign = personal_sign
      * - if that's a buffer (insecure hex that could sign any transaction) -> insecure eth_sign screen
-     */
+     *
     if (isUtf8(buffer)) {
       this.postMessage("personal_sign", payload.id, { data: hex });
     } else {
       this.postMessage("signInsecureMessage", payload.id, { data: hex });
     }
-  }
-
-  private personal_sign(payload: JsonRpcPayload) {
-    const message = payload.params[0];
-    const buffer = Utils.messageToBuffer(message);
-    if (buffer.length === 0) {
-      // hex it
-      const hex = Utils.bufferToHex(message);
-      this.postMessage("personal_sign", payload.id, { data: hex });
-    } else {
-      this.postMessage("personal_sign", payload.id, { data: message });
-    }
-  }
-
-  private personal_ecRecover(payload: JsonRpcPayload) {
-    this.postMessage("ecRecover", payload.id, {
-      signature: payload.params[1],
-      message: payload.params[0],
-    });
-  }
-
-  private eth_signTypedData(payload, useV4) {
-    this.postMessage("eth_signTypedData", payload.id, {
-      payload: payload.params[1],
-      useV4
-    });
-  }
-
-  private eth_sendTransaction(payload: JsonRpcPayload) {
-    this.postMessage("eth_sendTransaction", payload.id, payload.params[0]);
-  }
-
-  private eth_requestAccounts(payload: JsonRpcPayload) {
-    this.postMessage("eth_requestAccounts", payload.id, {});
-  }
-
-  private wallet_watchAsset(payload: /* JsonRpcPayload */ any) {
-    let options = payload.params.options;
-    this.postMessage("wallet_watchAsset", payload.id, {
-      type: payload.type,
-      contract: options.address,
-      symbol: options.symbol,
-      decimals: options.decimals || 0,
-    });
-  }
-
-  private wallet_switchEthereumChain(payload: JsonRpcPayload) {
-    this.postMessage("wallet_switchEthereumChain", payload.id, payload.params[0]);
-  }
-
-  private wallet_addEthereumChain(payload: JsonRpcPayload) {
-    this.postMessage("wallet_addEthereumChain", payload.id, payload.params[0]);
-  }
+  } */
 
   /**
    * Internal js -> native message handler
    */
   private postMessage(handler: string, id: string | number, data: unknown) {
-    //console.log("InAppBrowserWeb3Provider: postMessage", handler, id, data);
+    console.log("InAppBrowserUnisatProvider: postMessage", handler, id, data);
 
-    if (this.ready || handler === "eth_requestAccounts") {
+    if (this.ready) {
       let object = {
         id: id,
-        name: handler,
+        name: `unisat_${handler}`,
         object: data,
       };
       (window as any).webkit.messageHandlers.essentialsExtractor.postMessage(JSON.stringify(object));
     } else {
-      this.sendError(id, new ProviderRpcError(4100, "Provider is not ready"));
+      // TODO this.sendError(id, new ProviderRpcError(4100, "Provider is not ready"));
     }
   }
 
   /**
    * Internal native result -> js
    */
-  private sendResponse(id: string | number, result: unknown): void {
-    //console.log("InAppBrowserWeb3Provider: sendResponse", result);
+  /* private sendResponse(id: string | number, result: unknown): void {
+    //console.log("InAppBrowserUnisatProvider: sendResponse", result);
 
     let originId = this.idMapping.tryPopId(id) || id;
     let callback = this.callbacks.get(id);
@@ -369,17 +299,7 @@ class DappBrowserWeb3Provider extends EventEmitter implements AbstractProvider {
       id: originId
     };
 
-    /* if (typeof result === "object" && "jsonrpc" in result && "result" in result) {
-      // result is a JsonRpcResponse
-      data.result = (result as JsonRpcResponse).result;
-    } else {
-      // result is the JsonRpcResponse result
-      data.result = result;
-    } */
     data.result = result;
-
-    //console.log("data result", data.result);
-    //console.log("wrapResult", wrapResult);
 
     if (callback) {
       wrapResult ? callback(null, data) : callback(null, result as any);
@@ -387,25 +307,13 @@ class DappBrowserWeb3Provider extends EventEmitter implements AbstractProvider {
     } else {
       console.log(`callback id: ${id} not found`);
       // check if it's iframe callback
-
-      // TODO
-      /* for (var i = 0; i < window.frames.length; i++) {
-        const frame = window.frames[i];
-        try {
-          if (frame.ethereum.callbacks.has(id)) {
-            frame.ethereum.sendResponse(id, result);
-          }
-        } catch (error) {
-          console.log(`send response to frame error: ${error}`);
-        }
-      } */
     }
-  }
+  } */
 
   /**
    * Internal native error -> js
    */
-  private sendError(id: string | number, error: Error | string | object) {
+  /* private sendError(id: string | number, error: Error | string | object) {
     //console.log(`<== ${id} sendError ${error}`, error);
     //console.log("Instanceof ProviderRpcError?", error instanceof ProviderRpcError)
     let callback = this.callbacks.get(id);
@@ -418,9 +326,9 @@ class DappBrowserWeb3Provider extends EventEmitter implements AbstractProvider {
         callback(new Error(`${error}`));
       this.callbacks.delete(id);
     }
-  }
+  } */
 
-  private async callJsonRPC(payload: JsonRpcPayload): Promise<JsonRpcResponse> {
+  /* private async callJsonRPC(payload: JsonRpcPayload): Promise<JsonRpcResponse> {
     return new Promise(async (resolve, reject) => {
       var request = new XMLHttpRequest();
 
@@ -459,8 +367,8 @@ class DappBrowserWeb3Provider extends EventEmitter implements AbstractProvider {
         reject("Connection error");
       }
     });
-  }
+  } */
 }
 
 // Expose this class globally to be able to create instances from the browser dApp.
-window["DappBrowserWeb3Provider"] = DappBrowserWeb3Provider;
+window["DappBrowserUnisatProvider"] = DappBrowserUnisatProvider;
