@@ -2,9 +2,9 @@ import EventEmitter from "events";
 import isUtf8 from 'isutf8';
 import { AbstractProvider } from "web3-core";
 import { JsonRpcPayload, JsonRpcResponse } from "web3-core-helpers";
-import { IdMapping } from "../ids";
 import { ProviderRpcError } from "../providerrpcerror";
 import { Utils } from "../utils";
+import { IdMapping } from "./ids";
 
 type JsonRpcCallback = (error: Error | null, result?: JsonRpcResponse) => void;
 

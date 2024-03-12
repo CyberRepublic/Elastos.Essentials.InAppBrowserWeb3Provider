@@ -1,12 +1,9 @@
 "use strict";
 
-import { Utils } from "./utils";
+import { Utils } from "../utils";
 
 export class IdMapping {
   private intIds = new Map();
-
-  constructor() {
-  }
 
   tryIntifyId(payload) {
     if (!payload.id) {
