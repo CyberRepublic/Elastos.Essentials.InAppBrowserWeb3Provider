@@ -14,6 +14,8 @@ class DappBrowserUnisatProvider extends EventEmitter {
   private address: string = null; // Bitcoin address
   private requests = new Map<number, Request>(); // stores on going requests
 
+  public isEssentials = true; // Let dapps know that this provider is the Essentials injected one, in case they want to adjust their UI.
+
   constructor(rpcUrl: string, address: string) {
     super();
     console.log("Creating an Essentials DappBrowserUnisatProvider", rpcUrl, address);
