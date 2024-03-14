@@ -3,5 +3,5 @@
  */
 
 type SendBitcoinOptions = {
-  feeRate: number;
+  feeRate?: number;
 }
