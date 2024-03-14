@@ -32,6 +32,18 @@ class DappBrowserUnisatProvider extends EventEmitter {
     return [this.address];
   }
 
+  /**
+   * Called by essentials to update the address from browser settings
+   * while still browsing the app.
+   */
+  public setAddress(address: string) {
+    this.address = address;
+
+    console.log("Setting bitcoin address to:", address);
+
+    this.emit("accountsChanged", [address]);
+  }
+
   public async sendBitcoin(payAddress: string, satAmount: number, options?: SendBitcoinOptions): Promise<string> {
     console.log("sendBitcoin", payAddress, satAmount, options);
 
