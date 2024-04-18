@@ -1,7 +1,7 @@
 import EventEmitter from "events";
 import { DABMessagePayload } from "../dab-message";
 import { Utils } from "../utils";
-import { GetAddressesRequestPayload, Request } from "./request-types";
+import { AddressType, GetAddressesRequestPayload, Request } from "./request-types";
 import { JsonRpcPayload } from "web3-core-helpers";
 
 /**
@@ -12,7 +12,7 @@ import { JsonRpcPayload } from "web3-core-helpers";
  */
 class DappBrowserElaMainProvider extends EventEmitter {
   private rpcUrl: string = null;
-  private address: string = null; // Bitcoin address
+  private address: string = null; // Ela main chain address
   private requests = new Map<number, Request>(); // stores on going requests
 
 
@@ -41,13 +41,13 @@ class DappBrowserElaMainProvider extends EventEmitter {
     this.emit("accountsChanged", [address]);
   }
 
-  public async getAddresses(index: number, count: number, internal?: boolean): Promise<string> {
-    console.log("getAddresses", index, count, internal);
+  public async getAddresses(count: number, type = AddressType.Normal_external, index = 0): Promise<string[]> {
+    console.log("InAppBrowserElaMainProvider getAddresses", count, type, index);
 
     const requestPayload: GetAddressesRequestPayload = {
       index,
       count,
-      internal
+      type
     }
     return this.executeRequest("elamain_getAddresses", requestPayload);
   }
@@ -84,7 +84,7 @@ class DappBrowserElaMainProvider extends EventEmitter {
    * Internal js -> native message handler
    */
   private postMessage(message: DABMessagePayload) {
-    console.log("InAppBrowserElastosProvider: postMessage", message);
+    console.log("InAppBrowserElaMainProvider: postMessage", message);
     (window as any).webkit.messageHandlers.essentialsExtractor.postMessage(JSON.stringify(message));
   }
 
@@ -92,7 +92,7 @@ class DappBrowserElaMainProvider extends EventEmitter {
    * Internal native result -> js
    */
   public sendResponse(id: number, result: unknown): void {
-    console.log("InAppBrowserElastosProvider: sendResponse", id, result);
+    console.log("InAppBrowserElaMainProvider: sendResponse", id, result);
 
     const request = this.requests.get(id);
     request.resolver(result);
@@ -103,7 +103,7 @@ class DappBrowserElaMainProvider extends EventEmitter {
    * Internal native error -> js
    */
   public sendError(id: number, error: Error | string | object) {
-    console.log("InAppBrowserElastosProvider: sendError", id, error);
+    console.log("InAppBrowserElaMainProvider: sendError", id, error);
 
     const request = this.requests.get(id);
 
