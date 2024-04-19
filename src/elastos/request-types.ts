@@ -11,6 +11,7 @@ export enum AddressType  {
   CROwnerDeposit = 'cr-owner-deposit',
   OwnerDeposit = 'owner-deposit',
   OwnerStake = 'owner-stake',
+  All = 'all'
 }
 
 export type Request = {
@@ -19,8 +20,12 @@ export type Request = {
   rejecter: (error: Error) => void;
 }
 
-export type GetAddressesRequestPayload = {
+export type GetMultiAddressesRequestPayload = {
   count: number;
   type: AddressType;
   index: number;
+}
+
+export type SignRequestPayload = {
+  data: any;
 }

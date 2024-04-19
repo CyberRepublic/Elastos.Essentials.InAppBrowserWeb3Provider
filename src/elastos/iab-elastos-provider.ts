@@ -1,8 +1,7 @@
 import EventEmitter from "events";
 import { DABMessagePayload } from "../dab-message";
 import { Utils } from "../utils";
-import { AddressType, GetAddressesRequestPayload, Request } from "./request-types";
-import { JsonRpcPayload } from "web3-core-helpers";
+import { AddressType, GetMultiAddressesRequestPayload, Request, SignRequestPayload } from "./request-types";
 
 /**
  * Internal web3 provider injected into Elastos Essentials' in app browser dApps and bridging
@@ -24,12 +23,8 @@ class DappBrowserElaMainProvider extends EventEmitter {
     this.address = address;
   }
 
-  public async requestAccounts(): Promise<string[]> {
-    return [this.address];
-  }
-
-  public async getAccounts(): Promise<string[]> {
-    return [this.address];
+  public async getAccount(): Promise<string> {
+    return this.address;
   }
 
   /**
@@ -38,23 +33,32 @@ class DappBrowserElaMainProvider extends EventEmitter {
   public setAddress(address: string) {
     this.address = address;
 
-    this.emit("accountsChanged", [address]);
+    this.emit("accountChanged", address);
   }
 
-  public async getAddresses(count: number, type = AddressType.Normal_external, index = 0): Promise<string[]> {
-    console.log("InAppBrowserElaMainProvider getAddresses", count, type, index);
+  /**
+   * if type is AddressType.All: Add all special addresses first, then half the external addresses and half the internal addresses
+   * @param count
+   * @param type
+   * @param index only for multi addresses wallet
+   * @returns
+   */
+  public async getMultiAddresses(count: number, type = AddressType.All, index = 0): Promise<string[]> {
+    console.log("InAppBrowserElaMainProvider getMultiAddresses", count, type, index);
 
-    const requestPayload: GetAddressesRequestPayload = {
+    const requestPayload: GetMultiAddressesRequestPayload = {
       index,
       count,
       type
     }
-    return this.executeRequest("elamain_getAddresses", requestPayload);
+    return this.executeRequest("elamain_getMultiAddresses", requestPayload);
   }
 
-  private elamain_sign(payload: JsonRpcPayload) {
-    // TODO
-    return this.executeRequest("elamain_sign", payload);
+  public signMessage(payload: any): Promise<string> {
+    const requestPayload: SignRequestPayload = {
+      data: payload,
+    }
+    return this.executeRequest("elamain_sign", requestPayload);
   }
 
   /**
