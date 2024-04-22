@@ -27,5 +27,6 @@ export type GetMultiAddressesRequestPayload = {
 }
 
 export type SignRequestPayload = {
-  data: any;
+  digest: string;
+  addresses: string[]
 }

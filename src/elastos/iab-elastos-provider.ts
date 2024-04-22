@@ -54,11 +54,14 @@ class DappBrowserElaMainProvider extends EventEmitter {
     return this.executeRequest("elamain_getMultiAddresses", requestPayload);
   }
 
-  public signMessage(payload: any): Promise<string> {
+  public signMessage(digest: string, addresses?: string[]): Promise<string> {
+    console.log("InAppBrowserElaMainProvider signMessage", digest, "addresses:", addresses);
+
     const requestPayload: SignRequestPayload = {
-      data: payload,
+      digest,
+      addresses
     }
-    return this.executeRequest("elamain_sign", requestPayload);
+    return this.executeRequest("elamain_signMessage", requestPayload);
   }
 
   /**
