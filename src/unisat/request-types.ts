@@ -15,3 +15,10 @@ export type SendBitcoinRequestPayload = {
   satAmount: number; // Number of sats to pay.
   satPerVB: number; // Integer number (not decimal)
 }
+
+export type SignBitcoinDatatPayload = {
+  rawData: string;
+  prevOutScript: string;
+  inIndex: number; // the index of input
+  value: number; // value of the input
+}
