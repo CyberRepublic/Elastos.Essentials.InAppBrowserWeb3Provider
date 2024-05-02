@@ -1,7 +1,7 @@
 import EventEmitter from "events";
 import { DABMessagePayload } from "../dab-message";
 import { Utils } from "../utils";
-import { Request, SendBitcoinRequestPayload, SignBitcoinDatatPayload } from "./request-types";
+import { PushTxParam, Request, SendBitcoinRequestPayload, SignBitcoinDataPayload } from "./request-types";
 
 /**
  * Internal web3 provider injected into Elastos Essentials' in app browser dApps and bridging
@@ -61,9 +61,17 @@ class DappBrowserUnisatProvider extends EventEmitter {
     return this.executeRequest("unisat_signMessage", message);
   }
 
+  /**
+   *
+   * @param rawData : btc transaction
+   * @param prevOutScript : the lock BTC script
+   * @param inIndex : the index of inputs
+   * @param value : the sat amount of input
+   * @returns
+   */
   public async signData(rawData: string, prevOutScript: string, inIndex: number, value: number): Promise<string> {
     console.log("signData", rawData, prevOutScript, inIndex, value);
-    const requestPayload: SignBitcoinDatatPayload = {
+    const requestPayload: SignBitcoinDataPayload = {
       rawData,
       prevOutScript,
       inIndex,
@@ -76,6 +84,11 @@ class DappBrowserUnisatProvider extends EventEmitter {
     console.log("getPublicKey");
 
     return this.executeRequest("unisat_getPublicKey", null);
+  }
+
+  public async pushTx(options: PushTxParam): Promise<string> {
+    console.log("pushTx");
+    return this.executeRequest("unisat_pushTx", options);
   }
 
   /**

@@ -16,9 +16,13 @@ export type SendBitcoinRequestPayload = {
   satPerVB: number; // Integer number (not decimal)
 }
 
-export type SignBitcoinDatatPayload = {
+export type SignBitcoinDataPayload = {
   rawData: string;
   prevOutScript: string;
   inIndex: number; // the index of input
   value: number; // value of the input
+}
+
+export type PushTxParam = {
+  rawtx: string; // rawTx to push
 }
