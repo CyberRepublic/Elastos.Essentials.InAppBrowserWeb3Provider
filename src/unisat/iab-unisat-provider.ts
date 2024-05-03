@@ -86,7 +86,9 @@ class DappBrowserUnisatProvider extends EventEmitter {
     return this.executeRequest("unisat_getPublicKey", null);
   }
 
-  public async pushTx(options: PushTxParam): Promise<string> {
+  // unisat: {rawtx: string}
+  // okx: rawtx: string
+  public async pushTx(options: PushTxParam | string): Promise<string> {
     console.log("pushTx");
     return this.executeRequest("unisat_pushTx", options);
   }
