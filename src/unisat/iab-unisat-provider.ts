@@ -62,20 +62,17 @@ class DappBrowserUnisatProvider extends EventEmitter {
   }
 
   /**
+   * Signs any payload, including random data or a real BTC raw transaction (CAUTION).
    *
-   * @param rawData : btc transaction
-   * @param prevOutScript : the lock BTC script
-   * @param inIndex : the index of inputs
-   * @param value : the sat amount of input
-   * @returns
+   * @param rawData Any HEX payload to sign, a raw BTC transaction encoded to HEX.
+   *
+   * @return Concatenated signature R|S (32 bytes, 32 bytes), HEX.
    */
-  public async signData(rawData: string, prevOutScript: string, inIndex: number, value: number): Promise<string> {
-    console.log("signData", rawData, prevOutScript, inIndex, value);
+  public async signData(rawData: string, type: "ecdsa" | "schnorr" = "ecdsa"): Promise<string> {
+    console.log("signData rawData:", rawData, "type:", type);
     const requestPayload: SignBitcoinDataPayload = {
       rawData,
-      prevOutScript,
-      inIndex,
-      value
+      type
     }
     return this.executeRequest("unisat_signData", requestPayload);
   }

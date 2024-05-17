@@ -18,9 +18,7 @@ export type SendBitcoinRequestPayload = {
 
 export type SignBitcoinDataPayload = {
   rawData: string;
-  prevOutScript: string;
-  inIndex: number; // the index of input
-  value: number; // value of the input
+  type: string; // "ecdsa" | "schnorr"
 }
 
 export type PushTxParam = {
