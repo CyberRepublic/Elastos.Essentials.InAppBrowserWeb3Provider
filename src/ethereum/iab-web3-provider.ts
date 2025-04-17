@@ -180,6 +180,9 @@ class DappBrowserWeb3Provider extends EventEmitter implements AbstractProvider {
 
     this.idMapping.tryIntifyId(payload);
     return new Promise<JsonRpcResponse>((resolve, reject) => {
+      if (!payload.jsonrpc) {
+        payload.jsonrpc = "2.0";
+      }
       if (!payload.id) {
         payload.id = Utils.genId();
       }
