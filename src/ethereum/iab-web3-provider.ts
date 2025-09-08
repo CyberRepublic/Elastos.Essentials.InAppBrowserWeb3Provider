@@ -1,5 +1,5 @@
 import EventEmitter from "events";
-import isUtf8 from 'isutf8';
+import isUtf8 from "isutf8";
 import { AbstractProvider } from "web3-core";
 import { JsonRpcPayload, JsonRpcResponse } from "web3-core-helpers";
 import { ProviderRpcError } from "../providerrpcerror";
@@ -23,7 +23,7 @@ class DappBrowserWeb3Provider extends EventEmitter implements AbstractProvider {
 
   private _chainId: number; // decimal version of the chain ID
   public get chainId(): string {
-    return '0x' + this._chainId.toString(16);
+    return "0x" + this._chainId.toString(16);
   }
 
   public set chainId(_chainId: string) {
@@ -32,11 +32,16 @@ class DappBrowserWeb3Provider extends EventEmitter implements AbstractProvider {
 
   private rpcUrls: { [chainID: number]: string } = {
     // List of chainId -> rpcUrl set by Essentials.
-  }
+  };
 
   constructor(chainId: number, rpcUrl: string, address: string) {
     super();
-    console.log("Creating an Essentials DappBrowserWeb3Provider", chainId, rpcUrl, address);
+    console.log(
+      "Creating an Essentials DappBrowserWeb3Provider",
+      chainId,
+      rpcUrl,
+      address
+    );
 
     this._chainId = chainId;
     this.setRPCApiEndpoint(chainId, rpcUrl);
@@ -58,7 +63,7 @@ class DappBrowserWeb3Provider extends EventEmitter implements AbstractProvider {
     // EIP1193 SPEC:
     // - networkChanged will emit the network ID as a decimal string
     // - chainChanged will emit the chain ID as a hexadecimal string
-    this.emit("chainChanged", '0x' + Number(this._chainId).toString(16));
+    this.emit("chainChanged", "0x" + Number(this._chainId).toString(16));
     this.emit("networkChanged", Number(this._chainId).toString(10));
   }
 
@@ -73,6 +78,9 @@ class DappBrowserWeb3Provider extends EventEmitter implements AbstractProvider {
     console.log("Setting address to:", address);
 
     this.emit("accountsChanged", [address]);
+
+    // Update selectedAddress for backward compatibility
+    (this as any).selectedAddress = lowerAddress;
 
     /* TODO
     for (var i = 0; i < window.frames.length; i++) {
@@ -123,22 +131,25 @@ class DappBrowserWeb3Provider extends EventEmitter implements AbstractProvider {
    * @deprecated Use request() method instead.
    * https://docs.metamask.io/guide/ethereum-provider.html#legacy-methods
    */
-  public send(requestOrMethod: JsonRpcPayload | string, callbackOrParams: JsonRpcCallback | Array<any>) {
+  public send(
+    requestOrMethod: JsonRpcPayload | string,
+    callbackOrParams: JsonRpcCallback | Array<any>
+  ) {
     if (typeof requestOrMethod === "string") {
       const method = requestOrMethod;
       const params = Array.isArray(callbackOrParams)
         ? callbackOrParams
         : callbackOrParams !== undefined
-          ? [callbackOrParams]
-          : [];
+        ? [callbackOrParams]
+        : [];
       const request: JsonRpcPayload = {
         jsonrpc: "2.0",
         id: 0,
         method,
-        params
+        params,
       };
       // Call _request() to wrap result into a JsonRpcResponse
-      return this._request(request).then(res => res.result);
+      return this._request(request).then((res) => res.result);
     }
     // send(JSONRPCRequest | JSONRPCRequest[], callback): void
     if (typeof callbackOrParams === "function") {
@@ -149,7 +160,7 @@ class DappBrowserWeb3Provider extends EventEmitter implements AbstractProvider {
     // send(JSONRPCRequest[]): JSONRPCResponse[]
     if (Array.isArray(requestOrMethod)) {
       const requests = requestOrMethod;
-      return requests.map(r => this.request(r));
+      return requests.map((r) => this.request(r));
     }
     // send(JSONRPCRequest): JSONRPCResponse
     const req = requestOrMethod;
@@ -160,14 +171,18 @@ class DappBrowserWeb3Provider extends EventEmitter implements AbstractProvider {
    * @deprecated Use request() method instead.
    * https://docs.metamask.io/guide/ethereum-provider.html#legacy-methods
    */
-  public sendAsync(payload: JsonRpcPayload, callback: (error: Error, result?: JsonRpcResponse) => void) {
+  public sendAsync(
+    payload: JsonRpcPayload,
+    callback: (error: Error, result?: JsonRpcResponse) => void
+  ) {
     // 'this' points to window in methods like web3.eth.getAccounts()
     var that = this;
     if (!(this instanceof DappBrowserWeb3Provider)) {
       that = (window as any).ethereum;
     }
 
-    that._request(payload)
+    that
+      ._request(payload)
       .then((data) => callback(null, data))
       .catch((error) => callback(error, null));
   }
@@ -175,7 +190,10 @@ class DappBrowserWeb3Provider extends EventEmitter implements AbstractProvider {
   /**
    * Internal request handler that receives JsonRpcPayloads and returns JsonRpcResponses.
    */
-  private _request(payload: JsonRpcPayload, wrapResult = true): Promise<JsonRpcResponse> {
+  private _request(
+    payload: JsonRpcPayload,
+    wrapResult = true
+  ): Promise<JsonRpcResponse> {
     //console.log("InAppBrowserWeb3Provider: _request", payload);
 
     this.idMapping.tryIntifyId(payload);
@@ -231,18 +249,23 @@ class DappBrowserWeb3Provider extends EventEmitter implements AbstractProvider {
         case "eth_newPendingTransactionFilter":
         case "eth_uninstallFilter":
         case "eth_subscribe":
-          throw new ProviderRpcError(4200, `Elastos Essentials does not support the ${payload.method} method.`);
+          throw new ProviderRpcError(
+            4200,
+            `Elastos Essentials does not support the ${payload.method} method.`
+          );
         default:
           // call upstream rpc
           this.callbacks.delete(payload.id as any);
           this.wrapResults.delete(payload.id);
 
-          this.callJsonRPC(payload).then(response => {
-            wrapResult ? resolve(response) : resolve(response.result);
-          }).catch(e => {
-            console.log("callJsonRPC catched");
-            reject(e);
-          });
+          this.callJsonRPC(payload)
+            .then((response) => {
+              wrapResult ? resolve(response) : resolve(response.result);
+            })
+            .catch((e) => {
+              console.log("callJsonRPC catched");
+              reject(e);
+            });
       }
     });
   }
@@ -310,7 +333,7 @@ class DappBrowserWeb3Provider extends EventEmitter implements AbstractProvider {
   private eth_signTypedData(payload, useV4) {
     this.postMessage("eth_signTypedData", payload.id, {
       payload: payload.params[1],
-      useV4
+      useV4,
     });
   }
 
@@ -333,7 +356,11 @@ class DappBrowserWeb3Provider extends EventEmitter implements AbstractProvider {
   }
 
   private wallet_switchEthereumChain(payload: JsonRpcPayload) {
-    this.postMessage("wallet_switchEthereumChain", payload.id, payload.params[0]);
+    this.postMessage(
+      "wallet_switchEthereumChain",
+      payload.id,
+      payload.params[0]
+    );
   }
 
   private wallet_addEthereumChain(payload: JsonRpcPayload) {
@@ -352,7 +379,9 @@ class DappBrowserWeb3Provider extends EventEmitter implements AbstractProvider {
         name: handler,
         object: data,
       };
-      (window as any).webkit.messageHandlers.essentialsExtractor.postMessage(JSON.stringify(object));
+      (window as any).webkit.messageHandlers.essentialsExtractor.postMessage(
+        JSON.stringify(object)
+      );
     } else {
       this.sendError(id, new ProviderRpcError(4100, "Provider is not ready"));
     }
@@ -369,7 +398,7 @@ class DappBrowserWeb3Provider extends EventEmitter implements AbstractProvider {
     let wrapResult = this.wrapResults.get(id);
     let data: JsonRpcResponse = {
       jsonrpc: "2.0",
-      id: originId
+      id: originId,
     };
 
     /* if (typeof result === "object" && "jsonrpc" in result && "result" in result) {
@@ -413,12 +442,12 @@ class DappBrowserWeb3Provider extends EventEmitter implements AbstractProvider {
     //console.log("Instanceof ProviderRpcError?", error instanceof ProviderRpcError)
     let callback = this.callbacks.get(id);
     if (callback) {
-      if (error instanceof Error)
-        callback(error);
+      if (error instanceof Error) callback(error);
       else if (typeof error === "object" && "code" in error)
-        callback(new ProviderRpcError((error as any)["code"], error["message"]));
-      else
-        callback(new Error(`${error}`));
+        callback(
+          new ProviderRpcError((error as any)["code"], error["message"])
+        );
+      else callback(new Error(`${error}`));
       this.callbacks.delete(id);
     }
   }
@@ -429,8 +458,8 @@ class DappBrowserWeb3Provider extends EventEmitter implements AbstractProvider {
 
       let rpcApiEndpoint = await this.getRPCApiEndpoint();
 
-      request.open('POST', rpcApiEndpoint, true);
-      request.setRequestHeader('Content-Type', 'application/json');
+      request.open("POST", rpcApiEndpoint, true);
+      request.setRequestHeader("Content-Type", "application/json");
       request.timeout = 5000;
 
       request.onreadystatechange = function () {
@@ -438,7 +467,12 @@ class DappBrowserWeb3Provider extends EventEmitter implements AbstractProvider {
           var result = request.responseText;
 
           try {
-            console.log("JSON RPC call result:", result, "for payload:", payload);
+            console.log(
+              "JSON RPC call result:",
+              result,
+              "for payload:",
+              payload
+            );
             resolve(JSON.parse(result) as JsonRpcResponse);
           } catch (e) {
             console.log("JSON parse error");
@@ -454,7 +488,7 @@ class DappBrowserWeb3Provider extends EventEmitter implements AbstractProvider {
       request.onerror = function (error) {
         console.error("RPC call error");
         reject(error);
-      }
+      };
 
       try {
         request.send(JSON.stringify(payload));

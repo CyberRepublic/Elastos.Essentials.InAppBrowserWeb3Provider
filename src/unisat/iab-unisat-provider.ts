@@ -1,7 +1,12 @@
 import EventEmitter from "events";
 import { DABMessagePayload } from "../dab-message";
 import { Utils } from "../utils";
-import { PushTxParam, Request, SendBitcoinRequestPayload, SignBitcoinDataPayload } from "./request-types";
+import {
+  PushTxParam,
+  Request,
+  SendBitcoinRequestPayload,
+  SignBitcoinDataPayload,
+} from "./request-types";
 
 /**
  * Internal web3 provider injected into Elastos Essentials' in app browser dApps and bridging
@@ -18,7 +23,11 @@ class DappBrowserUnisatProvider extends EventEmitter {
 
   constructor(rpcUrl: string, address: string) {
     super();
-    console.log("Creating an Essentials DappBrowserUnisatProvider", rpcUrl, address);
+    console.log(
+      "Creating an Essentials DappBrowserUnisatProvider",
+      rpcUrl,
+      address
+    );
 
     this.rpcUrl = rpcUrl;
     this.address = address;
@@ -44,14 +53,25 @@ class DappBrowserUnisatProvider extends EventEmitter {
     this.emit("accountsChanged", [address]);
   }
 
-  public async sendBitcoin(payAddress: string, satAmount: number, options?: SendBitcoinOptions): Promise<string> {
+  /**
+   * Updates the provider with a new wallet address and emits events
+   */
+  public updateAddress(address: string) {
+    this.setAddress(address);
+  }
+
+  public async sendBitcoin(
+    payAddress: string,
+    satAmount: number,
+    options?: SendBitcoinOptions
+  ): Promise<string> {
     console.log("sendBitcoin", payAddress, satAmount, options);
 
     const requestPayload: SendBitcoinRequestPayload = {
       payAddress,
       satAmount,
-      satPerVB: options?.feeRate
-    }
+      satPerVB: options?.feeRate,
+    };
     return this.executeRequest("unisat_sendBitcoin", requestPayload);
   }
 
@@ -68,12 +88,15 @@ class DappBrowserUnisatProvider extends EventEmitter {
    *
    * @return Concatenated signature R|S (32 bytes, 32 bytes), HEX.
    */
-  public async signData(rawData: string, type: "ecdsa" | "schnorr" = "ecdsa"): Promise<string> {
+  public async signData(
+    rawData: string,
+    type: "ecdsa" | "schnorr" = "ecdsa"
+  ): Promise<string> {
     console.log("signData rawData:", rawData, "type:", type);
     const requestPayload: SignBitcoinDataPayload = {
       rawData,
-      type
-    }
+      type,
+    };
     return this.executeRequest("unisat_signData", requestPayload);
   }
 
@@ -99,8 +122,8 @@ class DappBrowserUnisatProvider extends EventEmitter {
     const message: DABMessagePayload = {
       id,
       name,
-      object: data
-    }
+      object: data,
+    };
 
     const result = new Promise<ResultType>((resolver, rejecter) => {
       // Rember the request
@@ -118,7 +141,9 @@ class DappBrowserUnisatProvider extends EventEmitter {
    */
   private postMessage(message: DABMessagePayload) {
     console.log("InAppBrowserUnisatProvider: postMessage", message);
-    (window as any).webkit.messageHandlers.essentialsExtractor.postMessage(JSON.stringify(message));
+    (window as any).webkit.messageHandlers.essentialsExtractor.postMessage(
+      JSON.stringify(message)
+    );
   }
 
   /**
@@ -140,10 +165,8 @@ class DappBrowserUnisatProvider extends EventEmitter {
 
     const request = this.requests.get(id);
 
-    if (error instanceof Error)
-      request.rejecter(error);
-    else
-      request.rejecter(new Error(`${error}`));
+    if (error instanceof Error) request.rejecter(error);
+    else request.rejecter(new Error(`${error}`));
 
     this.requests.delete(id);
   }
