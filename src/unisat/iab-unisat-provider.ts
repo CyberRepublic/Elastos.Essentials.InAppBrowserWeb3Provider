@@ -1,12 +1,7 @@
-import EventEmitter from "events";
-import { DABMessagePayload } from "../dab-message";
-import { Utils } from "../utils";
-import {
-  PushTxParam,
-  Request,
-  SendBitcoinRequestPayload,
-  SignBitcoinDataPayload,
-} from "./request-types";
+import EventEmitter from 'events';
+import { DABMessagePayload } from '../dab-message';
+import { Utils } from '../utils';
+import { PushTxParam, Request, SendBitcoinRequestPayload, SignBitcoinDataPayload } from './request-types';
 
 /**
  * Internal web3 provider injected into Elastos Essentials' in app browser dApps and bridging
@@ -23,22 +18,30 @@ class DappBrowserUnisatProvider extends EventEmitter {
 
   constructor(rpcUrl: string, address: string) {
     super();
-    console.log(
-      "Creating an Essentials DappBrowserUnisatProvider",
-      rpcUrl,
-      address
-    );
+    console.log('Creating an Essentials DappBrowserUnisatProvider', rpcUrl, address);
 
     this.rpcUrl = rpcUrl;
-    this.address = address;
+    this.address = address || ''; // Ensure address is never undefined
   }
 
   public async requestAccounts(): Promise<string[]> {
-    return [this.address];
+    console.log('unisat requestAccounts called, current address:', this.address, 'type:', typeof this.address);
+
+    // If we have a valid address, return it immediately
+    if (this.address && this.address.trim() !== '') {
+      console.log('unisat requestAccounts returning existing address:', this.address);
+      return [this.address];
+    }
+
+    console.log('unisat requestAccounts triggering wallet selection');
+    // No valid address, trigger wallet selection
+    return this.executeRequest('unisat_requestAccounts', {});
   }
 
   public async getAccounts(): Promise<string[]> {
-    return [this.address];
+    console.log('unisat getAccounts', this.address);
+    // Only return accounts if we have a valid address
+    return this.address && this.address.trim() !== '' ? [this.address] : [];
   }
 
   /**
@@ -46,11 +49,15 @@ class DappBrowserUnisatProvider extends EventEmitter {
    * while still browsing the app.
    */
   public setAddress(address: string) {
-    this.address = address;
+    const oldAddress = this.address;
+    this.address = address || ''; // Ensure address is never undefined
 
-    console.log("Setting bitcoin address to:", address);
+    console.log('unisat setAddress called:', { oldAddress, newAddress: this.address });
 
-    this.emit("accountsChanged", [address]);
+    // Emit accountsChanged with the appropriate accounts array
+    const accounts = this.address && this.address.trim() !== '' ? [this.address] : [];
+    console.log('unisat emitting accountsChanged with accounts:', accounts);
+    this.emit('accountsChanged', accounts);
   }
 
   /**
@@ -60,25 +67,21 @@ class DappBrowserUnisatProvider extends EventEmitter {
     this.setAddress(address);
   }
 
-  public async sendBitcoin(
-    payAddress: string,
-    satAmount: number,
-    options?: SendBitcoinOptions
-  ): Promise<string> {
-    console.log("sendBitcoin", payAddress, satAmount, options);
+  public async sendBitcoin(payAddress: string, satAmount: number, options?: SendBitcoinOptions): Promise<string> {
+    console.log('sendBitcoin', payAddress, satAmount, options);
 
     const requestPayload: SendBitcoinRequestPayload = {
       payAddress,
       satAmount,
-      satPerVB: options?.feeRate,
+      satPerVB: options?.feeRate
     };
-    return this.executeRequest("unisat_sendBitcoin", requestPayload);
+    return this.executeRequest('unisat_sendBitcoin', requestPayload);
   }
 
   public async signMessage(message: string): Promise<string> {
-    console.log("signMessage", message);
+    console.log('signMessage', message);
 
-    return this.executeRequest("unisat_signMessage", message);
+    return this.executeRequest('unisat_signMessage', message);
   }
 
   /**
@@ -88,29 +91,26 @@ class DappBrowserUnisatProvider extends EventEmitter {
    *
    * @return Concatenated signature R|S (32 bytes, 32 bytes), HEX.
    */
-  public async signData(
-    rawData: string,
-    type: "ecdsa" | "schnorr" = "ecdsa"
-  ): Promise<string> {
-    console.log("signData rawData:", rawData, "type:", type);
+  public async signData(rawData: string, type: 'ecdsa' | 'schnorr' = 'ecdsa'): Promise<string> {
+    console.log('signData rawData:', rawData, 'type:', type);
     const requestPayload: SignBitcoinDataPayload = {
       rawData,
-      type,
+      type
     };
-    return this.executeRequest("unisat_signData", requestPayload);
+    return this.executeRequest('unisat_signData', requestPayload);
   }
 
   public async getPublicKey(): Promise<string> {
-    console.log("getPublicKey");
+    console.log('getPublicKey');
 
-    return this.executeRequest("unisat_getPublicKey", null);
+    return this.executeRequest('unisat_getPublicKey', null);
   }
 
   // unisat: {rawtx: string}
   // okx: rawtx: string
   public async pushTx(options: PushTxParam | string): Promise<string> {
-    console.log("pushTx");
-    return this.executeRequest("unisat_pushTx", options);
+    console.log('pushTx');
+    return this.executeRequest('unisat_pushTx', options);
   }
 
   /**
@@ -122,7 +122,7 @@ class DappBrowserUnisatProvider extends EventEmitter {
     const message: DABMessagePayload = {
       id,
       name,
-      object: data,
+      object: data
     };
 
     const result = new Promise<ResultType>((resolver, rejecter) => {
@@ -140,37 +140,43 @@ class DappBrowserUnisatProvider extends EventEmitter {
    * Internal js -> native message handler
    */
   private postMessage(message: DABMessagePayload) {
-    console.log("InAppBrowserUnisatProvider: postMessage", message);
-    (window as any).webkit.messageHandlers.essentialsExtractor.postMessage(
-      JSON.stringify(message)
-    );
+    console.log('InAppBrowserUnisatProvider: postMessage', message);
+    (window as any).webkit.messageHandlers.essentialsExtractor.postMessage(JSON.stringify(message));
   }
 
   /**
    * Internal native result -> js
    */
   public sendResponse(id: number, result: unknown): void {
-    console.log("InAppBrowserUnisatProvider: sendResponse", id, result);
+    console.log('unisat sendResponse called:', { id, result, resultType: typeof result });
 
     const request = this.requests.get(id);
-    request.resolver(result);
-    this.requests.delete(id);
+    if (request) {
+      console.log('unisat resolving request with result:', result);
+      request.resolver(result);
+      this.requests.delete(id);
+    } else {
+      console.warn('unisat sendResponse: no request found for id:', id);
+    }
   }
 
   /**
    * Internal native error -> js
    */
   public sendError(id: number, error: Error | string | object) {
-    console.log("InAppBrowserUnisatProvider: sendError", id, error);
+    console.log('unisat sendError called:', { id, error });
 
     const request = this.requests.get(id);
-
-    if (error instanceof Error) request.rejecter(error);
-    else request.rejecter(new Error(`${error}`));
-
-    this.requests.delete(id);
+    if (request) {
+      console.log('unisat rejecting request with error:', error);
+      if (error instanceof Error) request.rejecter(error);
+      else request.rejecter(new Error(`${error}`));
+      this.requests.delete(id);
+    } else {
+      console.warn('unisat sendError: no request found for id:', id);
+    }
   }
 }
 
 // Expose this class globally to be able to create instances from the browser dApp.
-window["DappBrowserUnisatProvider"] = DappBrowserUnisatProvider;
+window['DappBrowserUnisatProvider'] = DappBrowserUnisatProvider;
