@@ -1,7 +1,7 @@
-import EventEmitter from "events";
-import { DABMessagePayload } from "../dab-message";
-import { Utils } from "../utils";
-import { AddressType, GetMultiAddressesRequestPayload, Request, SignRequestPayload } from "./request-types";
+import EventEmitter from 'events';
+import { DABMessagePayload } from '../dab-message';
+import { Utils } from '../utils';
+import { AddressType, GetMultiAddressesRequestPayload, Request, SignRequestPayload } from './request-types';
 
 /**
  * Internal web3 provider injected into Elastos Essentials' in app browser dApps and bridging
@@ -14,10 +14,9 @@ class DappBrowserElaMainProvider extends EventEmitter {
   private address: string = null; // Ela main chain address
   private requests = new Map<number, Request>(); // stores on going requests
 
-
   constructor(rpcUrl: string, address: string) {
     super();
-    console.log("Creating an Essentials DappBrowserElaMainProvider", rpcUrl, address);
+    console.log('Creating an Essentials DappBrowserElaMainProvider', rpcUrl, address);
 
     this.rpcUrl = rpcUrl;
     this.address = address;
@@ -31,9 +30,18 @@ class DappBrowserElaMainProvider extends EventEmitter {
    * Sets the active wallet address and informs listeners about the change.
    */
   public setAddress(address: string) {
+    const wasConnected = !!(this.address && this.address.trim() !== '');
+    const isNowConnected = !!(address && address.trim() !== '');
+
     this.address = address;
 
-    this.emit("accountChanged", address);
+    this.emit('accountChanged', address);
+
+    // Emit disconnect event if wallet was connected but now disconnected
+    if (wasConnected && !isNowConnected) {
+      console.log('Elastos wallet disconnected - emitting disconnect event');
+      this.emit('disconnect', { code: 4900, message: 'The provider has been disconnected from the wallet' });
+    }
   }
 
   /**
@@ -44,24 +52,24 @@ class DappBrowserElaMainProvider extends EventEmitter {
    * @returns
    */
   public async getMultiAddresses(count: number, type = AddressType.All, index = 0): Promise<string[]> {
-    console.log("InAppBrowserElaMainProvider getMultiAddresses", count, type, index);
+    console.log('InAppBrowserElaMainProvider getMultiAddresses', count, type, index);
 
     const requestPayload: GetMultiAddressesRequestPayload = {
       index,
       count,
       type
-    }
-    return this.executeRequest("elamain_getMultiAddresses", requestPayload);
+    };
+    return this.executeRequest('elamain_getMultiAddresses', requestPayload);
   }
 
   public signMessage(digest: string, addresses?: string[]): Promise<string> {
-    console.log("InAppBrowserElaMainProvider signMessage", digest, "addresses:", addresses);
+    console.log('InAppBrowserElaMainProvider signMessage', digest, 'addresses:', addresses);
 
     const requestPayload: SignRequestPayload = {
       digest,
       addresses
-    }
-    return this.executeRequest("elamain_signMessage", requestPayload);
+    };
+    return this.executeRequest('elamain_signMessage', requestPayload);
   }
 
   /**
@@ -74,7 +82,7 @@ class DappBrowserElaMainProvider extends EventEmitter {
       id,
       name,
       object: data
-    }
+    };
 
     const result = new Promise<ResultType>((resolver, rejecter) => {
       // Rember the request
@@ -91,7 +99,7 @@ class DappBrowserElaMainProvider extends EventEmitter {
    * Internal js -> native message handler
    */
   private postMessage(message: DABMessagePayload) {
-    console.log("InAppBrowserElaMainProvider: postMessage", message);
+    console.log('InAppBrowserElaMainProvider: postMessage', message);
     (window as any).webkit.messageHandlers.essentialsExtractor.postMessage(JSON.stringify(message));
   }
 
@@ -99,7 +107,7 @@ class DappBrowserElaMainProvider extends EventEmitter {
    * Internal native result -> js
    */
   public sendResponse(id: number, result: unknown): void {
-    console.log("InAppBrowserElaMainProvider: sendResponse", id, result);
+    console.log('InAppBrowserElaMainProvider: sendResponse', id, result);
 
     const request = this.requests.get(id);
     request.resolver(result);
@@ -110,18 +118,16 @@ class DappBrowserElaMainProvider extends EventEmitter {
    * Internal native error -> js
    */
   public sendError(id: number, error: Error | string | object) {
-    console.log("InAppBrowserElaMainProvider: sendError", id, error);
+    console.log('InAppBrowserElaMainProvider: sendError', id, error);
 
     const request = this.requests.get(id);
 
-    if (error instanceof Error)
-      request.rejecter(error);
-    else
-      request.rejecter(new Error(`${error}`));
+    if (error instanceof Error) request.rejecter(error);
+    else request.rejecter(new Error(`${error}`));
 
     this.requests.delete(id);
   }
 }
 
 // Expose this class globally to be able to create instances from the browser dApp.
-window["DappBrowserElaMainProvider"] = DappBrowserElaMainProvider;
+window['DappBrowserElaMainProvider'] = DappBrowserElaMainProvider;

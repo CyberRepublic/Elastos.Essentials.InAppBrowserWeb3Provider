@@ -50,7 +50,11 @@ class DappBrowserUnisatProvider extends EventEmitter {
    */
   public setAddress(address: string) {
     const oldAddress = this.address;
+    const wasConnected = !!(this.address && this.address.trim() !== '');
+
     this.address = address || ''; // Ensure address is never undefined
+
+    const isNowConnected = !!(this.address && this.address.trim() !== '');
 
     console.log('unisat setAddress called:', { oldAddress, newAddress: this.address });
 
@@ -58,6 +62,12 @@ class DappBrowserUnisatProvider extends EventEmitter {
     const accounts = this.address && this.address.trim() !== '' ? [this.address] : [];
     console.log('unisat emitting accountsChanged with accounts:', accounts);
     this.emit('accountsChanged', accounts);
+
+    // Emit disconnect event if wallet was connected but now disconnected
+    if (wasConnected && !isNowConnected) {
+      console.log('Unisat wallet disconnected - emitting disconnect event');
+      this.emit('disconnect', { code: 4900, message: 'The provider has been disconnected from the wallet' });
+    }
   }
 
   /**

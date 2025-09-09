@@ -38,12 +38,17 @@ class DappBrowserWeb3Provider extends EventEmitter implements AbstractProvider {
     super();
     console.log('Creating an Essentials DappBrowserWeb3Provider', chainId, rpcUrl, address);
 
-    this._chainId = chainId;
-    this.setRPCApiEndpoint(chainId, rpcUrl);
     this.address = address;
+    this._chainId = chainId;
     this.ready = !!(this._chainId && this.address);
 
-    this.emitConnect(chainId);
+    if (chainId) {
+      this.setRPCApiEndpoint(chainId, rpcUrl);
+    }
+
+    if (this.ready) {
+      this.emitConnect(chainId);
+    }
   }
 
   /**
@@ -66,27 +71,26 @@ class DappBrowserWeb3Provider extends EventEmitter implements AbstractProvider {
    * Sets the active wallet address and informs listeners about the change.
    */
   public setAddress(address: string) {
-    const lowerAddress = (address || '').toLowerCase();
+    // Handle null/undefined values properly
+    const normalizedAddress = address ?? '';
+    const lowerAddress = normalizedAddress.toLowerCase();
+    const wasConnected = !!(this.address && this.address.trim() !== '');
+    const isNowConnected = !!(lowerAddress && lowerAddress.trim() !== '');
+
     this.address = lowerAddress;
     this.ready = !!(this._chainId && this.address && this.address.trim() !== '');
 
-    console.log('Setting address to:', address);
+    console.log('Setting address to:', address, 'normalized to:', lowerAddress);
 
     // Emit accountsChanged with the appropriate accounts array
     const accounts = this.address && this.address.trim() !== '' ? [this.address] : [];
     this.emit('accountsChanged', accounts);
 
-    // Update selectedAddress for backward compatibility
-    (this as any).selectedAddress = lowerAddress;
-
-    /* TODO
-    for (var i = 0; i < window.frames.length; i++) {
-      const frame = window.frames[i];
-      if (frame.ethereum && frame.ethereum.isTrust) {
-        frame.ethereum.address = lowerAddress;
-        frame.ethereum.ready = !!address;
-      }
-    } */
+    // Emit disconnect event if wallet was connected but now disconnected
+    if (wasConnected && !isNowConnected) {
+      console.log('Wallet disconnected - emitting disconnect event');
+      this.emit('disconnect', { code: 4900, message: 'The provider has been disconnected from the wallet' });
+    }
   }
 
   // Backward compatibility with some dapps.
@@ -105,6 +109,7 @@ class DappBrowserWeb3Provider extends EventEmitter implements AbstractProvider {
   }
 
   public isConnected(): boolean {
+    console.log('web3 provider isConnected TRUE', this.address);
     return true;
   }
 
@@ -369,8 +374,6 @@ class DappBrowserWeb3Provider extends EventEmitter implements AbstractProvider {
    * Internal native result -> js
    */
   private sendResponse(id: string | number, result: unknown): void {
-    //console.log("InAppBrowserWeb3Provider: sendResponse", result);
-
     let originId = this.idMapping.tryPopId(id) || id;
     let callback = this.callbacks.get(id);
     let wrapResult = this.wrapResults.get(id);
@@ -379,36 +382,13 @@ class DappBrowserWeb3Provider extends EventEmitter implements AbstractProvider {
       id: originId
     };
 
-    /* if (typeof result === "object" && "jsonrpc" in result && "result" in result) {
-      // result is a JsonRpcResponse
-      data.result = (result as JsonRpcResponse).result;
-    } else {
-      // result is the JsonRpcResponse result
-      data.result = result;
-    } */
     data.result = result;
-
-    //console.log("data result", data.result);
-    //console.log("wrapResult", wrapResult);
 
     if (callback) {
       wrapResult ? callback(null, data) : callback(null, result as any);
       this.callbacks.delete(id);
     } else {
       console.log(`callback id: ${id} not found`);
-      // check if it's iframe callback
-
-      // TODO
-      /* for (var i = 0; i < window.frames.length; i++) {
-        const frame = window.frames[i];
-        try {
-          if (frame.ethereum.callbacks.has(id)) {
-            frame.ethereum.sendResponse(id, result);
-          }
-        } catch (error) {
-          console.log(`send response to frame error: ${error}`);
-        }
-      } */
     }
   }
 
@@ -416,8 +396,6 @@ class DappBrowserWeb3Provider extends EventEmitter implements AbstractProvider {
    * Internal native error -> js
    */
   private sendError(id: string | number, error: Error | string | object) {
-    //console.log(`<== ${id} sendError ${error}`, error);
-    //console.log("Instanceof ProviderRpcError?", error instanceof ProviderRpcError)
     let callback = this.callbacks.get(id);
     if (callback) {
       if (error instanceof Error) callback(error);
