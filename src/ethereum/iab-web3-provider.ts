@@ -422,7 +422,13 @@ class DappBrowserWeb3Provider extends EventEmitter implements AbstractProvider {
 
           try {
             console.log('JSON RPC call result:', result, 'for payload:', payload);
-            resolve(JSON.parse(result) as JsonRpcResponse);
+
+            const response = JSON.parse(result) as JsonRpcResponse;
+            if (response.error) {
+              reject(response.error);
+            } else {
+              resolve(response);
+            }
           } catch (e) {
             console.log('JSON parse error');
             reject('Invalid JSON response returned by the JSON RPC');
