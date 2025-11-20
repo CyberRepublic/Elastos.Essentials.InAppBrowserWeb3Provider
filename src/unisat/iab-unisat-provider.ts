@@ -2,6 +2,7 @@ import EventEmitter from 'events';
 import { DABMessagePayload } from '../dab-message';
 import { Utils } from '../utils';
 import { PushTxParam, Request, SendBitcoinRequestPayload, SignBitcoinDataPayload } from './request-types';
+import { ProviderRpcError } from '../providerrpcerror';
 
 /**
  * Internal web3 provider injected into Elastos Essentials' in app browser dApps and bridging
@@ -179,8 +180,15 @@ class DappBrowserUnisatProvider extends EventEmitter {
     const request = this.requests.get(id);
     if (request) {
       console.log('unisat rejecting request with error:', error);
-      if (error instanceof Error) request.rejecter(error);
-      else request.rejecter(new Error(`${error}`));
+      if (error instanceof Error) {
+        request.rejecter(error);
+      }
+      else if (typeof error === 'object' && 'code' in error) {
+        request.rejecter(new ProviderRpcError((error as any)['code'], error['message']));
+      }
+      else {
+        request.rejecter(new Error(`${error}`));
+      }
       this.requests.delete(id);
     } else {
       console.warn('unisat sendError: no request found for id:', id);
