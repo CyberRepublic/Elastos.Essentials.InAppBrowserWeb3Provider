@@ -21,6 +21,26 @@ export type SignBitcoinDataPayload = {
   type: string; // "ecdsa" | "schnorr"
 }
 
+/** UniSat-compatible `toSignInputs` entry for `signPsbt`. */
+export type UnisatSignPsbtToSignInput = {
+  index: number;
+  address?: string;
+  publicKey?: string;
+  sighashTypes?: number[];
+  disableTweakSigner?: boolean;
+  useTweakedSigner?: boolean;
+};
+
+export type UnisatSignPsbtOptions = {
+  autoFinalized?: boolean;
+  toSignInputs?: UnisatSignPsbtToSignInput[];
+};
+
+export type SignBitcoinPsbtPayload = {
+  psbtHex: string;
+  options?: UnisatSignPsbtOptions;
+};
+
 export type PushTxParam = {
   rawtx: string; // rawTx to push
 }

@@ -1,7 +1,7 @@
 import EventEmitter from 'events';
 import { DABMessagePayload } from '../dab-message';
 import { Utils } from '../utils';
-import { PushTxParam, Request, SendBitcoinRequestPayload, SignBitcoinDataPayload } from './request-types';
+import { PushTxParam, Request, SendBitcoinRequestPayload, SignBitcoinDataPayload, SignBitcoinPsbtPayload, UnisatSignPsbtOptions } from './request-types';
 import { ProviderRpcError } from '../providerrpcerror';
 
 /**
@@ -109,6 +109,22 @@ class DappBrowserUnisatProvider extends EventEmitter {
       type
     };
     return this.executeRequest('unisat_signData', requestPayload);
+  }
+
+  /**
+   * Signs a PSBT (same parameters as UniSat `signPsbt`).
+   *
+   * @param psbtHex PSBT serialized as hex (leading `70736274` magic).
+   * @param options Optional `autoFinalized` (default true) and `toSignInputs`.
+   * @returns Signed PSBT as hex.
+   */
+  public async signPsbt(psbtHex: string, options?: UnisatSignPsbtOptions): Promise<string> {
+    console.log('signPsbt psbtHex length:', psbtHex?.length, 'options:', options);
+    const requestPayload: SignBitcoinPsbtPayload = {
+      psbtHex,
+      options
+    };
+    return this.executeRequest('unisat_signPsbt', requestPayload);
   }
 
   public async getPublicKey(): Promise<string> {
